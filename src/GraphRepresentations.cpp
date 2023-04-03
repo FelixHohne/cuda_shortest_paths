@@ -9,7 +9,6 @@
 #include <unordered_map>
 #include <vector>
 
-
 void printAdjList(std::unordered_map<int, std::list<int>>  adjList) {
     for (const auto &token: adjList) {
         std::cout << "Adjacency list of " << token.first << std:: endl;
