@@ -13,7 +13,11 @@ int main(int argc, char *argv[]) {
     std::list<std::pair<int, int>> parsed_edge_list = read_edge_list(file_location);
 
     print_edge_list(parsed_edge_list);
-    constructAdjList(parsed_edge_list);
+    std::unordered_map<int, std::list<int>> adjList = constructAdjList(parsed_edge_list);
+    printAdjList(adjList);
+
+
+
 
     return 0;
 }
