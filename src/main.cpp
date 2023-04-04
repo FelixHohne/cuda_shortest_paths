@@ -22,14 +22,27 @@ int main(int argc, char *argv[]) {
     if (DEBUG_PRINT)
         printAdjList(adjList);
 
+    auto start_dijkstra = std::chrono::steady_clock::now();
+
     auto [min_distances, p] = st_dijkstra(adjList, 0);
 
-    std :: cout << "Reporting minimum distances: " << std::endl;
-    int counter = 0;
-    for (auto const distance: min_distances) {
-        std::cout << "min distance for " << counter << ": " << distance << std :: endl;
-        counter++;
+    auto end_dijkstra = std::chrono::steady_clock::now();
+    std::chrono::duration<double> get_dijkstra_time = end_dijkstra - start_dijkstra;
+    double dijkstra_time = get_dijkstra_time.count();
+
+    std::cout << "Time to run Dijkstra: " << dijkstra_time << std::endl;
+
+    if (DEBUG_PRINT) {
+        std :: cout << "Reporting minimum distances: " << std::endl;
+        int counter = 0;
+        for (auto const distance: min_distances) {
+            std::cout << "min distance for " << counter << ": " << distance << std :: endl;
+            counter++;
+        }
     }
+
+
+
 
     return 0;
 }
