@@ -12,7 +12,7 @@
 #include <queue>
 
 // Assume no max path length over 1B.
-const int INF = 1000000000;
+const int INF = INT_MAX;
 
 std::pair<std::vector<int>, std::vector<int>> st_dijkstra(std::unordered_map<int, std::list<int>> adjList, int source) {
     /*

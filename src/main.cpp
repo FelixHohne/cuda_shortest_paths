@@ -3,9 +3,12 @@
 #include "GraphRepresentations.h"
 #include "GraphAlgorithms.h"
 #include <vector>
+#include <fstream>
+#include <iostream>
 
 int main(int argc, char *argv[]) {
     bool DEBUG_PRINT = false;
+    bool OUTPUT_TO_FILE = true; 
 
     if (argc <= 1) {
         std::cout << "Requires argument for matrix location" << std::endl;
@@ -32,17 +35,32 @@ int main(int argc, char *argv[]) {
 
     std::cout << "Time to run Dijkstra: " << dijkstra_time << std::endl;
 
+
     if (DEBUG_PRINT) {
         std :: cout << "Reporting minimum distances: " << std::endl;
         int counter = 0;
         for (auto const distance: min_distances) {
-            std::cout << "min distance for " << counter << ": " << distance << std :: endl;
+            if (distance != INT_MAX) {
+                std::cout << "min distance for " << counter << ": " << distance << std :: endl;
+            }
             counter++;
         }
     }
 
 
+    if (OUTPUT_TO_FILE) {
+        int counter = 0; 
+        std::string output_file_name = "../serial_dijkstra.txt"; 
+        std::ofstream fsave(output_file_name); 
 
-
+        fsave << "source\tdistance" << std :: endl; 
+        for (auto const distance: min_distances) {
+            if (distance != INT_MAX) { 
+                fsave << counter << "\t" << distance << std :: endl;
+            }
+            counter++;
+        }
+        fsave.close();
+    }
     return 0;
 }
