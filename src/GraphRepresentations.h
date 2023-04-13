@@ -14,7 +14,7 @@ typedef struct CSR {
     int* rowPointers;
     int* neighborNodes;
     int* edgeWeights;
-};
+} CSR;
 
 
 std::unordered_map<int, std::list<int>> constructAdjList(std::list<std::pair<int, int>> edge_list);

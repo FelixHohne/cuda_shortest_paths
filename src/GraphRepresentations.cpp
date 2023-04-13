@@ -33,22 +33,22 @@ std::unordered_map<int, std::list<int>> constructAdjList(std::list<std::pair<int
 
 CSR constructSparseCSR(std::unordered_map<int, std::list<int>> adjList, int numNodes) {
 
-    int* rowPointers = new int[numNodes];
+    int* rowPointers = new int[numNodes + 1];
     int numEdges = 0;
 
     for (auto const p: adjList) {
         numEdges = numEdges + p.second.size();
     }
 
-    int* neighborNodes = new int[numEdges];
-    int* edgeWeights = new int[numEdges];
+    int* neighborNodes = new int[numEdges + 1];
+    int* edgeWeights = new int[numEdges + 1];
 
     // TODO: Handle edge weights
-    std::fill_n(edgeWeights, numEdges, 1);
+    std::fill_n(edgeWeights, numEdges + 1, 1);
 
     int numEdgesAdded = 0;
 
-    for (int i = 0; i < numNodes; i++) {
+    for (int i = 0; i < numNodes + 1; i++) {
 
         std::list<int> neighbors;
         if (adjList.contains(i)) {

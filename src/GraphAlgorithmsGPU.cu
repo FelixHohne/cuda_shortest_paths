@@ -1,4 +1,3 @@
-#include "common.h"
 #include <chrono>
 #include <cmath>
 #include <string>
@@ -6,31 +5,49 @@
 #include <fstream>
 #include <iostream>
 #include <random>
-#include <thrust>
 #include <vector>
-#include "GraphRepresentations.h"
+#include "GraphAlgorithmsGPU.cuh"
 #include <bits/stdc++.h>
 
 
+int HelloWorld() {
+
+    return 0;
+}
+
 #define NUM_THREADS 1024
 
-__global__ void BellmanFord(int num_nodes, int num_edges, int* d_dists, int* d_preds, int* d_row_ptrs, int* d_neighbor_nodes, int* edge_weights) {
+__global__ void BellmanFord(int num_nodes, int num_edges, int* d_dists, int* d_preds, int* d_row_ptrs, int* d_neighbor_nodes, int* d_edge_weights) {
 
     int tid = threadIdx.x + blockDim.x * blockIdx.x;
 
     if (tid >= num_nodes - 1) {
         return;
     }
-    
-    // for each edge (u, v) with weight w in edges do
-            // if distance[u] + w < distance[v] then
-            //     distance[v] := distance[u] + w
-            //     predecessor[v] := u
 
+    // each thread is responsible for a node u
+    // for each edge (u, v) with weight w
+    for (int i = d_row_ptrs[tid]; i < d_row_ptrs[tid + 1]; i++) {
+        int v = d_neighbor_nodes[i];
+        // if distance[tid] + w < distance[v]
+        if (d_dists[tid] != INT_MAX && d_dists[tid] + d_edge_weights[i] < d_dists[v]) {
+            // update d_dist and d_preds
+            // distance[v] := distance[tid] + w
+            
+            // d_dists[v] = d_dists[tid] + d_edge_weights[i];
+            atomicExch(d_dists + v ,  d_dists[tid] + d_edge_weights[i]);
+            // predecessor[v] := tid
+            
+            // d_preds[v] = tid;
+            atomicExch(d_preds + v, tid);
+        }
+    }
 }
 
-
-std::Pair<int*, int*> initializeBellmanFord(CSR graphCSR, int source) {
+/**
+ * Requires: no negative-weight cycles
+ */
+std::pair<int*, int*> initializeBellmanFord(CSR graphCSR, int source) {
     int* d_dists;
     int* d_preds;
     int* d_row_ptrs;
@@ -53,8 +70,8 @@ std::Pair<int*, int*> initializeBellmanFord(CSR graphCSR, int source) {
        BellmanFord<<<blks, NUM_THREADS>>>( graphCSR.numNodes, graphCSR.numEdges, d_dists, d_preds, d_row_ptrs, d_neighbor_nodes, d_edge_weights);
     }
 
-    int* dists = int[graphCSR.numNodes];
-    int* preds = int[graphCSR.numNodes];
+    int* dists = new int[graphCSR.numNodes];
+    int* preds = new int[graphCSR.numNodes];
     cudaMemcpy(dists, d_dists, graphCSR.numNodes * sizeof(int), cudaMemcpyDeviceToHost);
     cudaMemcpy(preds, d_preds, graphCSR.numNodes * sizeof(int), cudaMemcpyDeviceToHost);
 

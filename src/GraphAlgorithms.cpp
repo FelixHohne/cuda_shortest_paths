@@ -15,7 +15,7 @@
 // Assume no max path length over 1B.
 const int INF = INT_MAX;
 
-std::pair<std::vector<int>, std::vector<int>> st_dijkstra(std::unordered_map<int, std::list<int>> adjList, int source) {
+std::pair<int*, int*> st_dijkstra(std::unordered_map<int, std::list<int>> adjList, int source) {
     /*
      * Note: Implementation using Red-Black Tree via std::set.
      * Current implementation assumes edge weights are always 1.
@@ -42,5 +42,5 @@ std::pair<std::vector<int>, std::vector<int>> st_dijkstra(std::unordered_map<int
             }
         }
     }
-    return std::make_pair(d, p);
+    return std::make_pair(d.data(), p.data());
 }
