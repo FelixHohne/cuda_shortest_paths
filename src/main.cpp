@@ -21,6 +21,9 @@ int main(int argc, char *argv[]) {
     if (DEBUG_PRINT)
         print_edge_list(parsed_edge_list);
     std::unordered_map<int, std::list<int>> adjList = constructAdjList(parsed_edge_list);
+    // TODO: AdjList.size() is not safe
+    
+    constructSparseCSR(adjList, adjList.size());
 
     if (DEBUG_PRINT)
         printAdjList(adjList);
