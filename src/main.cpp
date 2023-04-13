@@ -55,39 +55,39 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // auto end_algo = std::chrono::steady_clock::now();
-    // std::chrono::duration<double> get_algo_time = end_algo - start_algo;
-    // double algo_time = get_algo_time.count();
+    auto end_algo = std::chrono::steady_clock::now();
+    std::chrono::duration<double> get_algo_time = end_algo - start_algo;
+    double algo_time = get_algo_time.count();
 
-    // std::cout << "Time to run Algorithm: " << algo_time << std::endl;
+    std::cout << "Time to run Algorithm: " << algo_time << std::endl;
 
-    // auto [min_distances, p] = results;
+    auto [min_distances, p] = results;
 
-    // if (DEBUG_PRINT) {
-    //     std :: cout << "Reporting minimum distances: " << std::endl;
-    //     int counter = 0;
-    //     for (auto const distance: min_distances) {
-    //         if (distance != INT_MAX) {
-    //             std::cout << "min distance for " << counter << ": " << distance << std :: endl;
-    //         }
-    //         counter++;
-    //     }
-    // }
+    if (DEBUG_PRINT) {
+        std :: cout << "Reporting minimum distances: " << std::endl;
+        int counter = 0;
+        for (auto const distance: min_distances) {
+            if (distance != INT_MAX) {
+                std::cout << "min distance for " << counter << ": " << distance << std :: endl;
+            }
+            counter++;
+        }
+    }
 
 
-    // if (OUTPUT_TO_FILE) {
-    //     int counter = 0; 
-    //     std::string output_file_name = "../serial_dijkstra.txt"; 
-    //     std::ofstream fsave(output_file_name); 
+    if (OUTPUT_TO_FILE) {
+        int counter = 0; 
+        std::string output_file_name = "../serial_dijkstra.txt"; 
+        std::ofstream fsave(output_file_name); 
 
-    //     fsave << "source\tdistance" << std :: endl; 
-    //     for (auto const distance: min_distances) {
-    //         if (distance != INT_MAX) { 
-    //             fsave << counter << "\t" << distance << std :: endl;
-    //         }
-    //         counter++;
-    //     }
-    //     fsave.close();
-    // }
+        fsave << "source\tdistance" << std :: endl; 
+        for (auto const distance: min_distances) {
+            if (distance != INT_MAX) { 
+                fsave << counter << "\t" << distance << std :: endl;
+            }
+            counter++;
+        }
+        fsave.close();
+    }
     return 0;
 }
