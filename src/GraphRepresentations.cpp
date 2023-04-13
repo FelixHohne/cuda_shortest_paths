@@ -67,7 +67,7 @@ CSR constructSparseCSR(std::unordered_map<int, std::list<int>> adjList, int numN
 
     }
 
-    CSR graphCSR = {rowPointers, neighborNodes, edgeWeights};
+    CSR graphCSR = {numNodes, numEdges, rowPointers, neighborNodes, edgeWeights};
     return graphCSR;
 }
 

@@ -7,9 +7,10 @@
 
 
 #include <list>
+#include <string>
 
 void print_edge_list(std::list<std::pair<int, int>> parsed_edge_list);
-std::list<std::pair<int, int>> read_edge_list(std::string);
+std::list<std::pair<int, int>> read_edge_list(std::string filename);
 
 #endif //GRAPHALGORITHMSWITHCUDA_GRAPHLOADING_H
 

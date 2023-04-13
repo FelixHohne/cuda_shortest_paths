@@ -9,6 +9,7 @@
 #include <stdexcept> // std::runtime_error
 #include <list>
 #include <iostream>
+#include <string>
 
 void print_edge_list(std::list<std::pair<int, int>> parsed_edge_list) {
     for (const auto &token: parsed_edge_list) {

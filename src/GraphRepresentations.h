@@ -9,6 +9,8 @@
 
 
 typedef struct CSR {
+    int numNodes;
+    int numEdges;
     int* rowPointers;
     int* neighborNodes;
     int* edgeWeights;
