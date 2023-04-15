@@ -17,8 +17,8 @@ typedef struct CSR {
 } CSR;
 
 
-std::unordered_map<int, std::list<int>> constructAdjList(std::list<std::pair<int, int>> edge_list);
-void printAdjList(std::unordered_map<int, std::list<int>>  adjList);
-CSR constructSparseCSR(std::unordered_map<int, std::list<int>> adjList, int numNodes);
+std::unordered_map<int, std::list<int>> construct_adj_list(std::list<std::pair<int, int>> edge_list);
+void print_adj_list(std::unordered_map<int, std::list<int>>  adjList);
+CSR construct_sparse_CSR(std::unordered_map<int, std::list<int>> adjList, int numNodes);
 
 #endif //GRAPHALGORITHMSWITHCUDA_GRAPHREPRESENTATIONS_H

@@ -10,7 +10,7 @@
 #include <vector>
 
 
-void printAdjList(std::unordered_map<int, std::list<int>>  adjList) {
+void print_adj_list(std::unordered_map<int, std::list<int>>  adjList) {
     for (const auto &token: adjList) {
         std::cout << "Adjacency list of " << token.first << std:: endl;
         for (const auto &elem: token.second) {
@@ -21,7 +21,7 @@ void printAdjList(std::unordered_map<int, std::list<int>>  adjList) {
 
 }
 
-std::unordered_map<int, std::list<int>> constructAdjList(std::list<std::pair<int, int>> edge_list) {
+std::unordered_map<int, std::list<int>> construct_adj_list(std::list<std::pair<int, int>> edge_list) {
     std::unordered_map<int, std::list<int>> adjList;
     for (const auto &token: edge_list) {
         adjList[token.first].push_back(token.second);
@@ -31,7 +31,7 @@ std::unordered_map<int, std::list<int>> constructAdjList(std::list<std::pair<int
 }
 
 
-CSR constructSparseCSR(std::unordered_map<int, std::list<int>> adjList, int numNodes) {
+CSR construct_sparse_CSR(std::unordered_map<int, std::list<int>> adjList, int numNodes) {
 
     int* rowPointers = new int[numNodes + 1];
     int numEdges = 0;

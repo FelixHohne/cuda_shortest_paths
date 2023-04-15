@@ -22,8 +22,7 @@ int main(int argc, char *argv[]) {
     }
     std::string file_location = argv[1];
     std::string graph_algo = argv[2];
-    // int source_node = std::stoi(argv[3]);
-    int source_node = 0;
+    int source_node = std::stoi(argv[3]);
 
     if (source_node < 0) {
         std::cout << "Nodes start at 0" << std::endl;
@@ -34,12 +33,12 @@ int main(int argc, char *argv[]) {
 
     if (DEBUG_PRINT)
         print_edge_list(parsed_edge_list);
-    std::unordered_map<int, std::list<int>> adjList = constructAdjList(parsed_edge_list);
-    CSR graphCSR = constructSparseCSR(adjList, adjList.size());
+    std::unordered_map<int, std::list<int>> adjList = construct_adj_list(parsed_edge_list);
+    CSR graphCSR = construct_sparse_CSR(adjList, adjList.size());
     // TODO: AdjList.size() is not safe
     
     if (DEBUG_PRINT)
-        printAdjList(adjList);
+        print_adj_list(adjList);
 
     auto start_algo = std::chrono::steady_clock::now();
 
