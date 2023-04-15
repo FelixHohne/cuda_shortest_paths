@@ -44,7 +44,9 @@ int main(int argc, char *argv[]) {
 
     std::pair<int*, int*> results;
     if (graph_algo == "Dijkstra") {
+        std::cout << "Doing Dijkstra" << std::endl;
         results = st_dijkstra(adjList, source_node);
+        std::cout << "Finished Dijkstra" << std::endl;
     } else if (graph_algo == "Bellman-Ford") {
         results = initializeBellmanFord(graphCSR, source_node);
     } else {

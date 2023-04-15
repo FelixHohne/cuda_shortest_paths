@@ -12,7 +12,7 @@
 #include <queue>
 #include <bits/stdc++.h>
 
-// Assume no max path length over 1B.
+// Assume no max path length over INT_MAX.
 const int INF = INT_MAX;
 
 std::pair<int*, int*> st_dijkstra(std::unordered_map<int, std::list<int>> adjList, int source) {
@@ -25,13 +25,14 @@ std::pair<int*, int*> st_dijkstra(std::unordered_map<int, std::list<int>> adjLis
     std::vector<int> p(n, -1);
 
     d[source] = 0;
-    std::set<std::pair<int, int>> q; //q.first = cost, q.second is node id
+    std::set<std::pair<int, int>> q; // q.first = cost, q.second is node id
     q.insert({0, source});
     while (!q.empty()) {
-        int v = q.begin() -> second;
+        int v = q.begin()->second;
         q.erase(q.begin());
         for (auto edge: adjList[v]) {
             int to = edge;
+            // TODO: support graphs with weighted edges
             int len = 1;
 
             if (d[v] + len < d[to]) {
