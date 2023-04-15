@@ -64,7 +64,8 @@ int main(int argc, char *argv[]) {
     if (DEBUG_PRINT) {
         std :: cout << "Reporting minimum distances: " << std::endl;
         int counter = 0;
-        for (auto const distance: min_distances) {
+        for (int i = 0; i < graphCSR.numNodes; i++) {
+            int distance = min_distances[i];
             if (distance != INT_MAX) {
                 std::cout << "min distance for " << counter << ": " << distance << std :: endl;
             }
@@ -72,14 +73,14 @@ int main(int argc, char *argv[]) {
         }
     }
 
-
     if (OUTPUT_TO_FILE) {
         int counter = 0; 
         std::string output_file_name = "../serial_dijkstra.txt"; 
         std::ofstream fsave(output_file_name); 
 
         fsave << "source\tdistance" << std :: endl; 
-        for (auto const distance: min_distances) {
+        for (int i = 0; i < graphCSR.numNodes; i++) {
+            int distance = min_distances[i];
             if (distance != INT_MAX) { 
                 fsave << counter << "\t" << distance << std :: endl;
             }
@@ -87,5 +88,6 @@ int main(int argc, char *argv[]) {
         }
         fsave.close();
     }
+
     return 0;
 }
