@@ -9,12 +9,6 @@
 #include "GraphAlgorithmsGPU.cuh"
 #include <bits/stdc++.h>
 
-
-int HelloWorld() {
-
-    return 0;
-}
-
 #define NUM_THREADS 1024
 
 __global__ void BellmanFord(int num_nodes, int num_edges, int* d_dists, int* d_preds, int* d_row_ptrs, int* d_neighbor_nodes, int* d_edge_weights) {

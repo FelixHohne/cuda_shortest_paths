@@ -6,6 +6,4 @@
 
 std::pair<int*, int*> initializeBellmanFord(CSR graphCSR, int source);
 
-int HelloWorld(); 
-
 #endif

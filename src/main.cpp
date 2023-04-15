@@ -13,9 +13,7 @@
 
 int main(int argc, char *argv[]) {
     bool DEBUG_PRINT = false;
-    bool OUTPUT_TO_FILE = true; 
-
-    HelloWorld(); 
+    bool OUTPUT_TO_FILE = true;
 
     if (argc <= 3) {
         std::cout << "Requires arguments for matrix location, method name, source node" << std::endl;
