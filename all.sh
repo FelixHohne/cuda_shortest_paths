@@ -12,7 +12,7 @@ if [ "$1" == "build" ]; then
 elif [ "$1" == "run" ]; then
   cd build
   make
-  ./GraphAlgorithmsWithCUDA ../datasets/roadNet-CA.txt Dijkstra 0
+  sbatch job-cpu
 elif [ "$1" == "status" ]; then
   squeue -u sh2223
 elif [ "$1" == "view" ]; then
