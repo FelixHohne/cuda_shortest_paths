@@ -29,13 +29,12 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    std::list<std::pair<int, int>> parsed_edge_list = read_edge_list(file_location);
+    auto [parsed_edge_list, max_node] = read_edge_list(file_location);
 
     if (DEBUG_PRINT)
         print_edge_list(parsed_edge_list);
     std::unordered_map<int, std::list<int>> adjList = construct_adj_list(parsed_edge_list);
-    CSR graphCSR = construct_sparse_CSR(adjList, adjList.size());
-    // TODO: AdjList.size() is not safe
+    CSR graphCSR = construct_sparse_CSR(adjList, max_node);
     
     if (DEBUG_PRINT)
         print_adj_list(adjList);
@@ -45,7 +44,7 @@ int main(int argc, char *argv[]) {
     std::pair<int*, int*> results;
     if (graph_algo == "Dijkstra") {
         std::cout << "Doing Dijkstra" << std::endl;
-        results = st_dijkstra(adjList, source_node);
+        results = st_dijkstra(adjList, source_node, max_node);
         std::cout << "Finished Dijkstra" << std::endl;
     } else if (graph_algo == "Bellman-Ford") {
         results = initializeBellmanFord(graphCSR, source_node);

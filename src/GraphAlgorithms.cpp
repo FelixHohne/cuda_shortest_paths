@@ -15,12 +15,12 @@
 // Assume no max path length over INT_MAX.
 const int INF = INT_MAX;
 
-std::pair<int*, int*> st_dijkstra(std::unordered_map<int, std::list<int>> adjList, int source) {
+std::pair<int*, int*> st_dijkstra(std::unordered_map<int, std::list<int>> adjList, int source, int num_nodes) {
     /*
      * Note: Implementation using Red-Black Tree via std::set.
      * Current implementation assumes edge weights are always 1.
      */
-    int n =  adjList.size();
+    int n = num_nodes; 
     std::vector<int> d(n, INF);
     std::vector<int> p(n, -1);
 
@@ -36,7 +36,6 @@ std::pair<int*, int*> st_dijkstra(std::unordered_map<int, std::list<int>> adjLis
             int len = 1;
 
             if (d[v] + len < d[to]) {
-                q.erase({d[to], to});
                 d[to] = d[v] + len;
                 p[to] = v;
                 q.insert({d[to], to});

@@ -18,9 +18,11 @@ void print_edge_list(std::list<std::pair<int, int>> parsed_edge_list) {
 }
 
 
-std::list<std::pair<int, int>> read_edge_list(std::string filename) {
+std::pair<std::list<std::pair<int, int>>, int> read_edge_list(std::string filename) {
     // Create an input filestream
     std::ifstream myFile(filename);
+
+    int max_value = 0; 
 
     // Make sure the file is open
     if (!myFile.is_open()) throw std::runtime_error("Could not open file");
@@ -41,10 +43,13 @@ std::list<std::pair<int, int>> read_edge_list(std::string filename) {
         ss >> val_1;
         ss >> val_2;
 
+        max_value = std::max(max_value, val_1); 
+        max_value = std::max(max_value, val_2); 
+
         parsed_edge_list.push_back(std::make_pair(val_1, val_2));
     }
 
     myFile.close();
-    return parsed_edge_list;
+    return std::make_pair(parsed_edge_list, max_value);
 }
 

@@ -11,4 +11,4 @@
 #include <list>
 
 
-std::pair<int*, int*> st_dijkstra(std::unordered_map<int, std::list<int>> adjList, int source);
+std::pair<int*, int*> st_dijkstra(std::unordered_map<int, std::list<int>> adjList, int source, int num_nodes);
