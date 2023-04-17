@@ -9,10 +9,14 @@ if [ "$1" == "build" ]; then
   mkdir build
   cd build
   cmake -DCMAKE_BUILD_TYPE=Release ..
-elif [ "$1" == "run" ]; then
+elif [ "$1" == "run-cpu" ]; then
   cd build
   make
   sbatch job-cpu
+elif [ "$1" == "run-gpu" ]; then
+  cd build
+  make
+  sbatch job-gpu
 elif [ "$1" == "status" ]; then
   squeue -u sh2223
 elif [ "$1" == "view" ]; then

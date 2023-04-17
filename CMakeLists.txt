@@ -10,3 +10,4 @@ set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_60")
 
 # Copy the job scripts
 configure_file(job-cpu job-cpu COPYONLY)
+configure_file(job-gpu job-gpu COPYONLY)
