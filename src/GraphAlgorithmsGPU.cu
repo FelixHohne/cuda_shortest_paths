@@ -15,7 +15,7 @@ __global__ void BellmanFord(int num_nodes, int num_edges, int* d_dists, int* d_p
 
     int tid = threadIdx.x + blockDim.x * blockIdx.x;
 
-    if (tid >= num_nodes - 1) {
+    if (tid > num_nodes - 1) {
         return;
     }
 
@@ -29,7 +29,7 @@ __global__ void BellmanFord(int num_nodes, int num_edges, int* d_dists, int* d_p
             // distance[v] := distance[tid] + w
             
             // d_dists[v] = d_dists[tid] + d_edge_weights[i];
-            atomicExch(d_dists + v ,  d_dists[tid] + d_edge_weights[i]);
+            atomicExch(d_dists + v,  d_dists[tid] + d_edge_weights[i]);
             // predecessor[v] := tid
             
             // d_preds[v] = tid;
@@ -55,9 +55,9 @@ std::pair<int*, int*> initializeBellmanFord(CSR graphCSR, int source) {
     cudaMalloc((void**) &d_neighbor_nodes, graphCSR.numEdges * sizeof(int));
     cudaMalloc((void**) &d_edge_weights, graphCSR.numEdges * sizeof(int));
     
-    cudaMemset(d_dists, INT_MAX, graphCSR.numNodes * sizeof(int)); 
+    cudaMemset(d_dists, INT_MAX, graphCSR.numNodes * sizeof(int));
     
-    // Sets d_dists[source] = 0. TODO check pointer arithmetic. 
+    // sets d_dists[source] = 0
     cudaMemset(d_dists + source, 0, sizeof(int));
 
     for (int i = 0; i < graphCSR.numNodes - 1; i++) {
