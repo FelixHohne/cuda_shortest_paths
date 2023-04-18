@@ -75,7 +75,10 @@ int main(int argc, char *argv[]) {
 
     if (OUTPUT_TO_FILE) {
         int counter = 0; 
-        std::string output_file_name = "../serial_dijkstra.txt"; 
+        std::string output_file_name = "../serial_dijkstra.txt";
+        if (graph_algo == "Bellman-Ford") {
+            output_file_name = "../gpu_bellman_ford.txt";
+        }
         std::ofstream fsave(output_file_name); 
 
         fsave << "source\tdistance" << std :: endl; 

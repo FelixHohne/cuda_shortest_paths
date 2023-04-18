@@ -19,6 +19,7 @@ elif [ "$1" == "run-gpu-salloc" ]; then
   cd build
   make
   ./GraphAlgorithmsWithCUDA ../datasets/roadNet-CA.txt Bellman-Ford 0
+  head -n 100 ../gpu_bellman_ford.txt > ../gpu_bellman_ford_100.txt
 elif [ "$1" == "status" ]; then
   squeue -u $USER
 elif [ "$1" == "view" ]; then
