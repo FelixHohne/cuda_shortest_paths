@@ -10,7 +10,11 @@ if [ "$1" == "build" ]; then
 elif [ "$1" == "run-cpu" ]; then
   cd build
   make
-  sbatch job-cpu
+  if [[ "$HOSTNAME" == *"login"* ]]; then
+    sbatch job-cpu
+  else
+    ./GraphAlgorithmsWithCUDA ../datasets/roadNet-CA.txt Dijkstra 0
+  fi
 elif [ "$1" == "run-gpu-batch" ]; then
   cd build
   make
