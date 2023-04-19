@@ -31,11 +31,13 @@ std::pair<int*, int*> st_dijkstra(std::unordered_map<int, std::list<int>> adjLis
         int v = q.begin()->second;
         q.erase(q.begin());
         for (auto edge: adjList[v]) {
+             
             int to = edge;
             // TODO: support graphs with weighted edges
             int len = 1;
 
-            if (d[v] + len < d[to]) {
+            if (d[v] < INT_MAX && d[v] + len < d[to]) {
+                q.erase({d[to], to}); 
                 d[to] = d[v] + len;
                 p[to] = v;
                 q.insert({d[to], to});
