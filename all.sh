@@ -1,12 +1,19 @@
 #!/bin/bash
 
 if [ "$1" == "build" ]; then
+  # remove existing build directory if one exists
   if [ -d "build" ]; then
     rm -r build
   fi
+  # CMake prefers out-of-tree builds- make a build directory
   mkdir build
   cd build
-  cmake -DCMAKE_BUILD_TYPE=Release ..
+  if [ "$USER" == "shiyuanhuang" ]; then
+    # configure local build on mac
+    cmake -DCMAKE_BUILD_TYPE=Release .. -DCMAKE_C_COMPILER=/opt/homebrew/Cellar/gcc@11/11.3.0/bin/gcc-11 -DCMAKE_CXX_COMPILER=/opt/homebrew/Cellar/gcc@11/11.3.0/bin/g++-11
+  else
+    cmake -DCMAKE_BUILD_TYPE=Release ..
+  fi
 elif [ "$1" == "run-cpu" ]; then
   cd build
   make

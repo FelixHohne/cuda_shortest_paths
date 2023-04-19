@@ -9,7 +9,8 @@
 #include <chrono>
 #include <bits/stdc++.h>
 #include <string>
-#include <cuda.h>
+// commented out since G2 doesn't like it
+// #include <cuda.h>
 
 int main(int argc, char *argv[]) {
     bool DEBUG_PRINT = false;
