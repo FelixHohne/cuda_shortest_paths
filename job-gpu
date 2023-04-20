@@ -6,4 +6,4 @@
 #SBATCH -t 00:15:00
 #SBATCH -A m4341
 
-./GraphAlgorithmsWithCUDA ../datasets/roadNet-CA.txt Bellman-Ford 0
+./graph_cuda ../datasets/roadNet-CA.txt Bellman-Ford 0
