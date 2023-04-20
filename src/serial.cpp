@@ -46,3 +46,24 @@ std::pair<int*, int*> st_dijkstra(std::unordered_map<int, std::list<int>> adjLis
     }
     return std::make_pair(d.data(), p.data());
 }
+
+void relax(int v, int new_dist, std::unordered_map<int, std::list<int>> buckets, int* dists) {
+    // TODO: implement
+}
+
+void delta_stepping(std::unordered_map<int, std::list<int>> adj_list, int source, int num_nodes, int* dists, int* preds, int delta) {
+    // TODO: implement
+    std::unordered_map<int, std::list<int>> heavy;
+    std::unordered_map<int, std::list<int>> light;
+    std::unordered_map<int, std::list<int>> buckets;
+    std::vector<int> S;
+    for (int i = 0; i < num_nodes; i++) {
+        dists[i] = INT_MAX;
+    }
+    relax(source, 0, buckets, dists);
+    i = 0;
+    while (!buckets.empty()) {
+        S.clear();
+        i++;
+    }
+}
