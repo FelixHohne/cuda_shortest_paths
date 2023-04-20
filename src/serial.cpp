@@ -14,7 +14,7 @@
 #include <bits/stdc++.h>
 
 // Assume no max path length over INT_MAX.
-const int INF = 1000000;
+const int INF = INT_MAX;
 
 void st_dijkstra(std::unordered_map<int, std::list<int>> adjList, int source, 
 int num_nodes, int* d, int* p) {
@@ -22,16 +22,13 @@ int num_nodes, int* d, int* p) {
      * Note: Implementation using Red-Black Tree via std::set.
      * Current implementation assumes edge weights are always 1.
      */
+
+    for (int i = 0; i < num_nodes; i++) {
+        d[i] = INF; 
+        p[i] = -1;
+    }
     
-    memset(d, INF, sizeof(int) * num_nodes); 
-    memset(p, -1, sizeof(int) * num_nodes); 
-    
-    std:: cout << "Source is: " << source << std::endl;
     d[source] = 0;
-
-    std :: cout << "Source element" << std :: endl;
-    std :: cout << d[source] << std :: endl;
-
     std::set<std::pair<int, int>> q; // q.first = cost, q.second is node id
     q.insert({0, source});
     while (!q.empty()) {
