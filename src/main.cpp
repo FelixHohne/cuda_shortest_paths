@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
 
     if (argc <= 3) {
         std::cout << "Requires arguments for matrix location, method name, source node" << std::endl;
-        std::cout << "Valid method names: \"Dijkstra\", \"Bellman-Ford\"" << std::endl;
+        std::cout << "Valid method names: \"Dijkstra\", \"Bellman-Ford\", \"serial-delta\"" << std::endl;
         return 1;
     }
     std::string file_location = argv[1];
@@ -50,6 +50,9 @@ int main(int argc, char *argv[]) {
         
     } else if (graph_algo == "Bellman-Ford") {
         initializeBellmanFord(graphCSR, source_node, max_node, min_distances, p);
+    } else if (graph_algo == "serial-delta") {
+        std::cout << "Doing serial delta-stepping" << std::endl;
+        delta_stepping(graphCSR, source_node, max_node, min_distances, p, 1);
     } else {
         std::cout << "Valid method names: \"Dijkstra\", \"Bellman-Ford\"" << std::endl;
         return 1;
@@ -82,6 +85,8 @@ int main(int argc, char *argv[]) {
         std::string output_file_name = "../serial_dijkstra.txt";
         if (graph_algo == "Bellman-Ford") {
             output_file_name = "../gpu_bellman_ford.txt";
+        } else if (graph_algo == "serial-delta") {
+            output_file_name = "../serial_delta.txt";
         }
         std::ofstream fsave(output_file_name); 
 
