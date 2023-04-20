@@ -8,6 +8,7 @@
 #include <vector>
 #include <unordered_map>
 #include <list>
+#include "graph.h"
 
 // Single threaded Dijkstra. 
 void st_dijkstra(std::unordered_map<int, std::list<int>> adjList, int source, int num_nodes, int* d, int* p);

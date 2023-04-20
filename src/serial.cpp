@@ -12,7 +12,7 @@
 #include <set>
 #include <queue>
 #include <bits/stdc++.h>
-
+#include <stdexcept>
 // Assume no max path length over INT_MAX.
 const int INF = INT_MAX;
 
@@ -76,14 +76,14 @@ void delta_stepping(CSR graph, int source, int num_nodes, int* dists, int* preds
             } else if (weight > 0) {
                 light_list.push_back(graph.neighborNodes[j]);
             } else {
-                throw new std::exception::what();
+                throw std::invalid_argument("Cannot have negative edge weights");
             }
         }
         if (!heavy_list.empty()) {
-            heavy.insert({v, heavy_list});
+            heavy.insert({i, heavy_list});
         }
         if (!light_list.empty()) {
-            light.insert({v, light_list});
+            light.insert({i, light_list});
         }
     }
 
@@ -112,7 +112,7 @@ void delta_stepping(CSR graph, int source, int num_nodes, int* dists, int* preds
                         // TODO: Fix edge weights
                         int new_distance = dists[v] + 1;
                         if (Req.contains(w)) {
-                            new_distance = min(Req[w], new_distance);
+                            new_distance = std::min(Req[w], new_distance);
                         }
                         Req.insert({w, new_distance});
                     }
@@ -131,7 +131,7 @@ void delta_stepping(CSR graph, int source, int num_nodes, int* dists, int* preds
                     // TODO: Fix edge weights
                     int new_distance = dists[v] + 1;
                     if (Req.contains(w)) {
-                        new_distance = min(Req[w], new_distance);
+                        new_distance = std::min(Req[w], new_distance);
                     }
                     Req.insert({w, new_distance});
                 }
