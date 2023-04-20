@@ -6,7 +6,7 @@
 #include <iostream>
 #include <random>
 #include <vector>
-#include "GraphAlgorithmsGPU.cuh"
+#include "gpu.cuh"
 #include <bits/stdc++.h>
 
 #define NUM_THREADS 1024

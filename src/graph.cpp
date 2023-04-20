@@ -2,7 +2,7 @@
 // Created by Felix Hohne on 4/3/23.
 //
 
-#include "GraphRepresentations.h"
+#include "graph.h"
 #include <vector>
 #include <list>
 #include <iostream>

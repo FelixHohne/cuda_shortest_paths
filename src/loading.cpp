@@ -2,7 +2,7 @@
 // Created by Felix Hohne on 4/3/23.
 //
 
-#include "GraphLoading.h"
+#include "loading.h"
 #include <fstream>
 #include <sstream>
 #include <utility> // std::pair

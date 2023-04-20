@@ -2,7 +2,7 @@
 // Created by Felix Hohne on 4/3/23.
 //
 
-#include "GraphAlgorithms.h"
+#include "serial.h"
 #include <vector>
 #include <list>
 #include <iostream>

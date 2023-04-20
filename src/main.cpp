@@ -1,8 +1,8 @@
 #include <iostream>
-#include "GraphLoading.h"
-#include "GraphRepresentations.h"
-#include "GraphAlgorithms.h"
-#include "GraphAlgorithmsGPU.cuh"
+#include "loading.h"
+#include "graph.h"
+#include "serial.h"
+#include "gpu.cuh"
 #include <vector>
 #include <fstream>
 #include <iostream>

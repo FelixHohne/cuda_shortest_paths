@@ -20,7 +20,7 @@ elif [ "$1" == "run-cpu" ]; then
   if [[ "$HOSTNAME" == *"login"* ]]; then
     sbatch job-cpu
   else
-    ./GraphAlgorithmsWithCUDA ../datasets/roadNet-CA.txt Dijkstra 0
+    ./graph_cuda ../datasets/roadNet-CA.txt Dijkstra 0
   fi
 elif [ "$1" == "run-gpu-batch" ]; then
   cd build
@@ -29,7 +29,7 @@ elif [ "$1" == "run-gpu-batch" ]; then
 elif [ "$1" == "run-gpu-salloc" ]; then
   cd build
   make
-  ./GraphAlgorithmsWithCUDA ../datasets/roadNet-CA.txt Bellman-Ford 0
+  ./graph_cuda ../datasets/roadNet-CA.txt Bellman-Ford 0
   head -n 100 ../gpu_bellman_ford.txt > ../gpu_bellman_ford_100.txt
 elif [ "$1" == "status" ]; then
   squeue -u $USER
@@ -52,7 +52,7 @@ elif [ "$1" == "correct" ]; then
     echo "correct not supported on Perlmutter, please run on local machine."
     # module load python
   else
-    python3 src/GraphAlgorithmsPython.py /datasets/roadNet-CA.txt
+    python3 src/correct.py /datasets/roadNet-CA.txt
     echo "Writing outputs to python_shortest_path_outs.txt"
   fi
 fi
