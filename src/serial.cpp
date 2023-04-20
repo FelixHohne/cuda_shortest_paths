@@ -51,9 +51,15 @@ int num_nodes, int* d, int* p) {
 }
 
 void relax(int v, int new_dist, std::unordered_map<int, std::list<int>> B, int* dists, int delta) {
-    // TODO: implement
     if (new_dist < dists[v]) {
         B[floor(dists[v] / delta)].remove(v);
+        int new_bucket = floor(new_dist / delta);
+
+        if (!B.contains(new_bucket)) {
+            B.insert({new_bucket, std::list<int>()});
+        }
+        B[new_bucket].push_back(v); 
+        dists[v] = new_dist; 
     }
 }
 

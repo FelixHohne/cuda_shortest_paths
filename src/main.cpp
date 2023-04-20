@@ -65,8 +65,6 @@ int main(int argc, char *argv[]) {
     std::cout << "Time to run Algorithm: " << algo_time << std::endl;
     
     std::cout << "Min distance vector source is : " << min_distances[source_node] << std::endl;
-    std::cout << "Finished Dijkstra" << std::endl;
-    std::cout << "source node is: " << source_node << std::endl;
 
     if (DEBUG_PRINT) {
         std :: cout << "Reporting minimum distances: " << std::endl;
