@@ -41,7 +41,7 @@ __global__ void BellmanFord(int num_nodes, int num_edges, int* d_dists, int* d_p
 /**
  * Requires: no negative-weight cycles
  */
-std::pair<int*, int*> initializeBellmanFord(CSR graphCSR, int source) {
+void initializeBellmanFord(CSR graphCSR, int source, int num_nodes, int* d, int* p) {
     int* d_dists;
     int* d_preds;
     int* d_row_ptrs;
@@ -64,10 +64,7 @@ std::pair<int*, int*> initializeBellmanFord(CSR graphCSR, int source) {
        BellmanFord<<<blks, NUM_THREADS>>>( graphCSR.numNodes, graphCSR.numEdges, d_dists, d_preds, d_row_ptrs, d_neighbor_nodes, d_edge_weights);
     }
 
-    int* dists = new int[graphCSR.numNodes];
-    int* preds = new int[graphCSR.numNodes];
-    cudaMemcpy(dists, d_dists, graphCSR.numNodes * sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy(preds, d_preds, graphCSR.numNodes * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(d, d_dists, graphCSR.numNodes * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(p, d_preds, graphCSR.numNodes * sizeof(int), cudaMemcpyDeviceToHost);
 
-    return std::make_pair(dists, preds); 
 }

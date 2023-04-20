@@ -4,6 +4,6 @@
 
 #include "graph.h"
 
-std::pair<int*, int*> initializeBellmanFord(CSR graphCSR, int source);
+void initializeBellmanFord(CSR graphCSR, int source, int num_nodes, int* d, int* p);
 
 #endif

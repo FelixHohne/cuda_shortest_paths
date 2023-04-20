@@ -41,14 +41,15 @@ int main(int argc, char *argv[]) {
         print_adj_list(adjList);
 
     auto start_algo = std::chrono::steady_clock::now();
+    int* min_distances = new int[max_node]; 
+    int* p = new int[max_node]; 
 
-    std::pair<int*, int*> results;
     if (graph_algo == "Dijkstra") {
         std::cout << "Doing Dijkstra" << std::endl;
-        results = st_dijkstra(adjList, source_node, max_node);
-        std::cout << "Finished Dijkstra" << std::endl;
+        st_dijkstra(adjList, source_node, max_node, min_distances, p);
+        
     } else if (graph_algo == "Bellman-Ford") {
-        results = initializeBellmanFord(graphCSR, source_node);
+        initializeBellmanFord(graphCSR, source_node, max_node, min_distances, p);
     } else {
         std::cout << "Valid method names: \"Dijkstra\", \"Bellman-Ford\"" << std::endl;
         return 1;
@@ -59,8 +60,10 @@ int main(int argc, char *argv[]) {
     double algo_time = get_algo_time.count();
 
     std::cout << "Time to run Algorithm: " << algo_time << std::endl;
-
-    auto [min_distances, p] = results;
+    
+    std::cout << "Min distance vector source is : " << min_distances[source_node] << std::endl;
+    std::cout << "Finished Dijkstra" << std::endl;
+    std::cout << "source node is: " << source_node << std::endl;
 
     if (DEBUG_PRINT) {
         std :: cout << "Reporting minimum distances: " << std::endl;
@@ -93,5 +96,7 @@ int main(int argc, char *argv[]) {
         fsave.close();
     }
 
+    delete[] min_distances;
+    delete[] p; 
     return 0;
 }
