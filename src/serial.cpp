@@ -50,26 +50,96 @@ int num_nodes, int* d, int* p) {
    
 }
 
-void relax(int v, int new_dist, std::unordered_map<int, std::list<int>> buckets, int* dists, int delta) {
+void relax(int v, int new_dist, std::unordered_map<int, std::list<int>> B, int* dists, int delta) {
     // TODO: implement
     if (new_dist < dists[v]) {
-        buckets[floor(dists[v] / delta)].remove(v);
+        B[floor(dists[v] / delta)].remove(v);
     }
 }
 
-void delta_stepping(std::unordered_map<int, std::list<int>> adj_list, int source, int num_nodes, int* dists, int* preds, int delta) {
+void delta_stepping(CSR graph, int source, int num_nodes, int* dists, int* preds, int Delta) {
     // TODO: implement
     std::unordered_map<int, std::list<int>> heavy;
     std::unordered_map<int, std::list<int>> light;
-    std::unordered_map<int, std::list<int>> buckets;
+    std::unordered_map<int, std::list<int>> B;
     std::vector<int> S;
+    
+    // initialize heavy and light
+    for (int i = 0; i < num_nodes; i++) {
+        std::list<int> heavy_list;
+        std::list<int> light_list;
+        for (int j = graph.rowPointers[i]; j < graph.rowPointers[i+1]; j++) {
+            // TODO: edge weights
+            int weight = 1;
+            if (weight > Delta) {
+                heavy_list.push_back(graph.neighborNodes[j]);
+            } else if (weight > 0) {
+                light_list.push_back(graph.neighborNodes[j]);
+            } else {
+                throw new std::exception::what();
+            }
+        }
+        if (!heavy_list.empty()) {
+            heavy.insert({v, heavy_list});
+        }
+        if (!light_list.empty()) {
+            light.insert({v, light_list});
+        }
+    }
+
+    // initialize tentative distances
     for (int i = 0; i < num_nodes; i++) {
         dists[i] = INT_MAX;
     }
-    relax(source, 0, buckets, dists, delta);
+    
+    relax(source, 0, B, dists, Delta);
     int i = 0;
-    while (!buckets.empty()) {
+    
+    while (!B.empty()) {
+        if (B.find(i) == B.end()) {
+            i++;
+            continue; 
+        }
         S.clear();
+        std::unordered_map<int, int> Req; 
+        std::list<int> B_i = B[i]; 
+
+        while (!B_i.empty()) {
+            // initialize Req
+            for (auto v: B_i) {
+                if (light.contains(v)) {
+                    for (auto w: light[v]) {
+                        // TODO: Fix edge weights
+                        int new_distance = dists[v] + 1;
+                        if (Req.contains(w)) {
+                            new_distance = min(Req[w], new_distance);
+                        }
+                        Req.insert({w, new_distance});
+                    }
+                }
+                S.push_back(v);
+            }
+            B.erase(i);
+            for (const auto &pair: Req) {
+                relax(pair.first, pair.second, B, dists, Delta);
+            }
+        }
+        Req.clear();
+        for (auto v: S) {
+            if (heavy.contains(v)) {
+                for (auto w: heavy[v]) {
+                    // TODO: Fix edge weights
+                    int new_distance = dists[v] + 1;
+                    if (Req.contains(w)) {
+                        new_distance = min(Req[w], new_distance);
+                    }
+                    Req.insert({w, new_distance});
+                }
+            }
+        }
+        for (const auto &pair: Req) {
+            relax(pair.first, pair.second, B, dists, Delta);
+        }
         i++;
     }
 }

@@ -14,8 +14,8 @@ void st_dijkstra(std::unordered_map<int, std::list<int>> adjList, int source, in
 
 // Effects: populates dists with shortest distance to corresponding node
 // Currently does nothing with preds, maybe we can in the future 
-// Uses a delta value of delta
+// Uses a delta value of Delta
 // Requires: length of dists is num_nodes
-void delta_stepping(std::unordered_map<int, std::list<int>> adj_list, int source, int num_nodes, int* dists, int* preds, int delta);
+void delta_stepping(CSR graph, int source, int num_nodes, int* dists, int* preds, int Delta);
 
 #endif //GRAPHCUDA_SERIAL_H
