@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
         initializeBellmanFord(graphCSR, source_node, max_node, min_distances, p);
     } else if (graph_algo == "serial-delta") {
         std::cout << "Doing serial delta-stepping" << std::endl;
-        delta_stepping(graphCSR, source_node, max_node, min_distances, p, 1);
+        delta_stepping(graphCSR, source_node, max_node, min_distances, p, 2);
     } else {
         std::cout << "Valid method names: \"Dijkstra\", \"Bellman-Ford\"" << std::endl;
         return 1;

@@ -50,17 +50,20 @@ int num_nodes, int* d, int* p) {
    
 }
 
-void relax(int v, int new_dist, std::unordered_map<int, std::list<int>> B, int* dists, int delta) {
+void relax(int v, int new_dist, std::unordered_map<int, std::list<int>>& B, int* dists, int delta) {
+    // std::cout << "relax values: " << dists[v] << ": " << new_dist << std::endl;
     if (new_dist < dists[v]) {
         B[floor(dists[v] / delta)].remove(v);
         int new_bucket = floor(new_dist / delta);
-
+        // std::cout << "new bucket" << new_bucket << std::endl;
         if (!B.contains(new_bucket)) {
             B.insert({new_bucket, std::list<int>()});
         }
         B[new_bucket].push_back(v); 
         dists[v] = new_dist; 
     }
+
+    // std::cout << "B size: " << B.size() << std::endl;
 }
 
 void delta_stepping(CSR graph, int source, int num_nodes, int* dists, int* preds, int Delta) {
@@ -93,6 +96,9 @@ void delta_stepping(CSR graph, int source, int num_nodes, int* dists, int* preds
         }
     }
 
+    std::cout << "Light size" << light.size() << std::endl; 
+
+
     // initialize tentative distances
     for (int i = 0; i < num_nodes; i++) {
         dists[i] = INT_MAX;
@@ -100,15 +106,20 @@ void delta_stepping(CSR graph, int source, int num_nodes, int* dists, int* preds
     
     relax(source, 0, B, dists, Delta);
     int i = 0;
+
     
     while (!B.empty()) {
+        // std::cout << "While B size" << B.size() << std::endl; 
         if (B.find(i) == B.end()) {
+            // std:: cout << "B" << "[" << i << "] is empty" << std::endl;
             i++;
             continue; 
         }
         S.clear();
         std::unordered_map<int, int> Req; 
         std::list<int> B_i = B[i]; 
+
+        // std::cout<< "B_i size" << B_i.size() << "for i = " << i << std::endl;
 
         while (!B_i.empty()) {
             // initialize Req
