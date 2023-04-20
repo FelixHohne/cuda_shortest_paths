@@ -3,6 +3,7 @@
 //
 
 #include "serial.h"
+#include <cmath>
 #include <vector>
 #include <list>
 #include <iostream>
@@ -52,8 +53,11 @@ int num_nodes, int* d, int* p) {
    
 }
 
-void relax(int v, int new_dist, std::unordered_map<int, std::list<int>> buckets, int* dists) {
+void relax(int v, int new_dist, std::unordered_map<int, std::list<int>> buckets, int* dists, int delta) {
     // TODO: implement
+    if (new_dist < dists[v]) {
+        buckets[floor(dists[v] / delta)].remove(v);
+    }
 }
 
 void delta_stepping(std::unordered_map<int, std::list<int>> adj_list, int source, int num_nodes, int* dists, int* preds, int delta) {
@@ -65,7 +69,7 @@ void delta_stepping(std::unordered_map<int, std::list<int>> adj_list, int source
     for (int i = 0; i < num_nodes; i++) {
         dists[i] = INT_MAX;
     }
-    relax(source, 0, buckets, dists);
+    relax(source, 0, buckets, dists, delta);
     int i = 0;
     while (!buckets.empty()) {
         S.clear();
