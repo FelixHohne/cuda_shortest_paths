@@ -20,7 +20,7 @@ elif [ "$1" == "run-cpu" ]; then
   if [[ "$HOSTNAME" == *"login"* ]]; then
     sbatch job-cpu
   else
-    ./graph_cuda ../datasets/roadNet-CA.txt Dijkstra 0
+    ./graph_cuda -f ../datasets/roadNet-CA.txt -a serial-dijkstra -s 0 -o serial-dijkstra.txt
   fi
 elif [ "$1" == "run-gpu-batch" ]; then
   cd build
@@ -29,8 +29,7 @@ elif [ "$1" == "run-gpu-batch" ]; then
 elif [ "$1" == "run-gpu-salloc" ]; then
   cd build
   make
-  ./graph_cuda ../datasets/roadNet-CA.txt Bellman-Ford 0
-  head -n 100 ../gpu_bellman_ford.txt > ../gpu_bellman_ford_100.txt
+  ./graph_cuda -f ../datasets/roadNet-CA.txt -a serial-bellman-ford -s 0 -o gpu-bellman-ford.txt
 elif [ "$1" == "status" ]; then
   squeue -u $USER
 elif [ "$1" == "view" ]; then
