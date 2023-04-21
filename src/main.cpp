@@ -32,10 +32,27 @@ int main(int argc, char *argv[]) {
 
     auto [parsed_edge_list, max_node] = read_edge_list(file_location);
 
+    if (DEBUG_PRINT) {
+        std::cout << "Number of nodes in the graph: " << max_node << std::endl; 
+        std::cout << "Number of edges in the graph: " << parsed_edge_list.size() << std :: endl;
+    }
+
     if (DEBUG_PRINT)
         print_edge_list(parsed_edge_list);
     std::unordered_map<int, std::list<int>> adjList = construct_adj_list(parsed_edge_list);
+
+
+    if (DEBUG_PRINT) {
+        std::cout << "Number of edges of node 9721 " << adjList[9721].size() << std::endl;
+
+        for (auto v: adjList[9721]) {
+            std :: cout << v << std :: endl; 
+        }
+    }
+    
+
     CSR graphCSR = construct_sparse_CSR(adjList, max_node);
+
     
     if (DEBUG_PRINT)
         print_adj_list(adjList);
