@@ -7,6 +7,7 @@
 #include <random>
 #include <vector>
 #include "gpu.cuh"
+#include <assert.h>
 #include <bits/stdc++.h>
 
 #define NUM_THREADS 1024
@@ -35,6 +36,20 @@ __global__ void BellmanFord(int num_nodes, int num_edges, int* d_dists, int* d_p
             // d_preds[v] = tid;
             atomicExch(d_preds + v, tid);
         }
+        
+    }
+}
+
+__global__ void initialize_dists_array(int* d_dists, int num_nodes) {
+    int tid = threadIdx.x + blockDim.x * blockIdx.x;
+    if (tid >= num_nodes) {
+        return;
+    }
+    
+    d_dists[tid] = INT_MAX; 
+    
+    if (tid == 0) {
+        d_dists[0] = 0;
     }
 }
 
@@ -55,10 +70,7 @@ void initializeBellmanFord(CSR graphCSR, int source, int num_nodes, int* d, int*
     cudaMalloc((void**) &d_neighbor_nodes, graphCSR.numEdges * sizeof(int));
     cudaMalloc((void**) &d_edge_weights, graphCSR.numEdges * sizeof(int));
     
-    cudaMemset(d_dists, INT_MAX, graphCSR.numNodes * sizeof(int));
-    
-    // sets d_dists[source] = 0
-    cudaMemset(d_dists + source, 0, sizeof(int));
+    initialize_dists_array<<<blks, NUM_THREADS>>>(d_dists, graphCSR.numNodes);
 
     for (int i = 0; i < graphCSR.numNodes - 1; i++) {
        BellmanFord<<<blks, NUM_THREADS>>>( graphCSR.numNodes, graphCSR.numEdges, d_dists, d_preds, d_row_ptrs, d_neighbor_nodes, d_edge_weights);
@@ -66,5 +78,7 @@ void initializeBellmanFord(CSR graphCSR, int source, int num_nodes, int* d, int*
 
     cudaMemcpy(d, d_dists, graphCSR.numNodes * sizeof(int), cudaMemcpyDeviceToHost);
     cudaMemcpy(p, d_preds, graphCSR.numNodes * sizeof(int), cudaMemcpyDeviceToHost);
+
+    std :: cout << "First two elements: " << d[0] << ", " << d[1] << std :: endl; 
 
 }
