@@ -24,8 +24,15 @@ void print_adj_list(std::unordered_map<int, std::list<int>>  adjList) {
 std::unordered_map<int, std::list<int>> construct_adj_list(std::list<std::pair<int, int>> edge_list) {
     std::unordered_map<int, std::list<int>> adjList;
     for (const auto &token: edge_list) {
-        adjList[token.first].push_back(token.second);
-        adjList[token.second].push_back(token.first);
+        auto [u, v] = token; 
+        if (std::find(adjList[u].begin(), adjList[u].end(), v) 
+            == adjList[u].end()) {
+            adjList[u].push_back(v);
+        }
+
+        if (std::find(adjList[v].begin(), adjList[v].end(), u) == adjList[v].end()) {
+            adjList[token.second].push_back(token.first);
+        }
     }
     return adjList;
 }
