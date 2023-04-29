@@ -51,16 +51,25 @@ int num_nodes, int* d, int* p) {
 }
 
 void relax(int v, int new_dist, std::unordered_map<int, std::list<int>>& B, int* dists, int delta) {
-    // std::cout << "relax values: " << dists[v] << ": " << new_dist << std::endl;
+
     if (new_dist < dists[v]) {
-        B[floor(dists[v] / delta)].remove(v);
+        if (v != 0 && B.find(floor(dists[v] / delta)) != B.end()) {
+            B[floor(dists[v] / delta)].remove(v);
+        }
+
+
         int new_bucket = floor(new_dist / delta);
-        // std::cout << "new bucket" << new_bucket << std::endl;
+
         if (!B.contains(new_bucket)) {
             B.insert({new_bucket, std::list<int>()});
         }
+
+
         B[new_bucket].push_back(v); 
+
+
         dists[v] = new_dist; 
+
     }
 
     // std::cout << "B size: " << B.size() << std::endl;
@@ -96,22 +105,17 @@ void delta_stepping(CSR graph, int source, int num_nodes, int* dists, int* preds
         }
     }
 
-    std::cout << "Light size: " << light.size() << std::endl; 
-
-
     // initialize tentative distances
     for (int i = 0; i < num_nodes; i++) {
         dists[i] = INT_MAX;
     }
     
     relax(source, 0, B, dists, Delta);
-    std :: cout << "At begin, B has size: " << B.size() << std :: endl;
     int i = 0;
 
-
     while (!B.empty()) {
-        std :: cout << "i: " << i << "B size: " << B.size() << std :: endl;
-        // std::cout << "While B size" << B.size() << std::endl; 
+        
+         std::cout << "While B size" << B.size() << "i: " << i << std::endl; 
         if (B.find(i) == B.end()) {
             // std:: cout << "B" << "[" << i << "] is empty" << std::endl;
             i++;
@@ -120,7 +124,7 @@ void delta_stepping(CSR graph, int source, int num_nodes, int* dists, int* preds
         S.clear();
         std::unordered_map<int, int> Req; 
 
-        while (!B[i].empty()) {
+        while (B.find(i) != B.end()) {
             // initialize Req
             for (auto v: B[i]) {
                 if (light.contains(v)) {
@@ -136,27 +140,35 @@ void delta_stepping(CSR graph, int source, int num_nodes, int* dists, int* preds
                 S.push_back(v);
             }
             B.erase(i);
+
             
             for (const auto &pair: Req) {
                 relax(pair.first, pair.second, B, dists, Delta);
             }
+
         }
+
+
         Req.clear();
-        for (auto v: S) {
-            if (heavy.contains(v)) {
-                for (auto w: heavy[v]) {
-                    // TODO: Fix edge weights
-                    int new_distance = dists[v] + 1;
-                    if (Req.contains(w)) {
-                        new_distance = std::min(Req[w], new_distance);
-                    }
-                    Req.insert({w, new_distance});
-                }
-            }
-        }
+
+
+        // for (auto v: S) {
+        //     if (heavy.contains(v)) {
+        //         for (auto w: heavy[v]) {
+        //             // TODO: Fix edge weights
+        //             int new_distance = dists[v] + 1;
+        //             if (Req.contains(w)) {
+        //                 new_distance = std::min(Req[w], new_distance);
+        //             }
+        //             Req.insert({w, new_distance});
+        //         }
+        //     }
+        // }
         // for (const auto &pair: Req) {
         //     relax(pair.first, pair.second, B, dists, Delta);
         // }
+
         i++;
+
     }
 }
