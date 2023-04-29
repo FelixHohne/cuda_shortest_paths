@@ -115,7 +115,7 @@ void delta_stepping(CSR graph, int source, int num_nodes, int* dists, int* preds
 
     while (!B.empty()) {
         
-         std::cout << "While B size" << B.size() << "i: " << i << std::endl; 
+        std::cout << "While B size" << B.size() << "i: " << i << std::endl; 
         if (B.find(i) == B.end()) {
             // std:: cout << "B" << "[" << i << "] is empty" << std::endl;
             i++;
