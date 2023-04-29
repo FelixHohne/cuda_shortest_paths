@@ -51,16 +51,52 @@ int num_nodes, int* d, int* p) {
 }
 
 void relax(int v, int new_dist, std::unordered_map<int, std::list<int>>& B, int* dists, int delta) {
-    // std::cout << "relax values: " << dists[v] << ": " << new_dist << std::endl;
+    std::cout << "relax values: " << dists[v] << ": " << new_dist << std::endl;
+
+    if (v != 0 && B.find(0) != B.end()) {
+                std :: cout << "Erase failed in 57 for i: " << std :: endl;
+                exit(123);
+    }
+
     if (new_dist < dists[v]) {
-        B[floor(dists[v] / delta)].remove(v);
+        if (v != 0 && B.find(floor(dists[v] / delta)) != B.end()) {
+            B[floor(dists[v] / delta)].remove(v);
+        }
+
+        if (v != 0 &&  B.find(0) != B.end()) {
+                std :: cout << "Erase failed in 68 for i: "  << std :: endl;
+                exit(123);
+        }
+
         int new_bucket = floor(new_dist / delta);
-        // std::cout << "new bucket" << new_bucket << std::endl;
+        std::cout << "new bucket: " << new_bucket << std::endl;
+
+        if (v != 0 &&  B.find(0) != B.end()) {
+                std :: cout << "Erase failed in 77 for i: "  << std :: endl;
+                exit(123);
+        }
+
         if (!B.contains(new_bucket)) {
             B.insert({new_bucket, std::list<int>()});
         }
+
+        if (v != 0 &&  B.find(0) != B.end()) {
+                std :: cout << "Erase failed in 87 for i: " << std :: endl;
+                exit(123);
+        }
+
         B[new_bucket].push_back(v); 
+
+        if (v != 0 &&  B.find(0) != B.end()) {
+                std :: cout << "Erase failed in 95 for i: "  << std :: endl;
+                exit(123);
+        }
         dists[v] = new_dist; 
+
+        if (v != 0 &&  B.find(0) != B.end()) {
+                std :: cout << "Erase failed in 102 for i: " << std :: endl;
+                exit(123);
+        }
     }
 
     // std::cout << "B size: " << B.size() << std::endl;
@@ -108,8 +144,17 @@ void delta_stepping(CSR graph, int source, int num_nodes, int* dists, int* preds
     std :: cout << "At begin, B has size: " << B.size() << std :: endl;
     int i = 0;
 
-
     while (!B.empty()) {
+        if (B.size() == 555) {
+            std :: cout << "Printing keys remaining " << std :: endl;
+            for (const auto& p : B ) {
+                std::cout << p.first << ":" << B[p.first].size() << std::endl; 
+            } 
+            std::cout << "Done" << std :: endl; 
+            exit(1);
+
+        }
+        
         std :: cout << "i: " << i << "B size: " << B.size() << std :: endl;
         // std::cout << "While B size" << B.size() << std::endl; 
         if (B.find(i) == B.end()) {
@@ -120,7 +165,7 @@ void delta_stepping(CSR graph, int source, int num_nodes, int* dists, int* preds
         S.clear();
         std::unordered_map<int, int> Req; 
 
-        while (!B[i].empty()) {
+        while (B.find(i) != B.end()) {
             // initialize Req
             for (auto v: B[i]) {
                 if (light.contains(v)) {
@@ -136,27 +181,66 @@ void delta_stepping(CSR graph, int source, int num_nodes, int* dists, int* preds
                 S.push_back(v);
             }
             B.erase(i);
+
+            if (B.find(i) != B.end()) {
+                std :: cout << "Erase failed in line 152" << std :: endl;
+                exit(123);
+            }
             
             for (const auto &pair: Req) {
-                relax(pair.first, pair.second, B, dists, Delta);
-            }
-        }
-        Req.clear();
-        for (auto v: S) {
-            if (heavy.contains(v)) {
-                for (auto w: heavy[v]) {
-                    // TODO: Fix edge weights
-                    int new_distance = dists[v] + 1;
-                    if (Req.contains(w)) {
-                        new_distance = std::min(Req[w], new_distance);
-                    }
-                    Req.insert({w, new_distance});
+                if (B.find(i) != B.end()) {
+                std :: cout << "Erase failed in line 192 for i = " << i << std :: endl;
+                exit(123);
                 }
+                relax(pair.first, pair.second, B, dists, Delta);
+                if (B.find(i) != B.end()) {
+                std :: cout << "Erase failed in line 197 for i = " << i << std :: endl;
+                exit(123);
             }
+            }
+
+            if (B.find(i) != B.end()) {
+                    std :: cout << "Erase failed in line 202 for i = " << i << std :: endl;
+                    exit(123);
+                }
+
         }
+
+        if (B.find(i) != B.end()) {
+                std :: cout << "Erase failed in line 196 for i = " << i << std :: endl;
+                exit(123);
+            }
+
+        Req.clear();
+
+        if (B.find(i) != B.end()) {
+                std :: cout << "Erase failed in line 203" << std :: endl;
+                exit(123);
+            }
+
+        // for (auto v: S) {
+        //     if (heavy.contains(v)) {
+        //         for (auto w: heavy[v]) {
+        //             // TODO: Fix edge weights
+        //             int new_distance = dists[v] + 1;
+        //             if (Req.contains(w)) {
+        //                 new_distance = std::min(Req[w], new_distance);
+        //             }
+        //             Req.insert({w, new_distance});
+        //         }
+        //     }
+        // }
         // for (const auto &pair: Req) {
         //     relax(pair.first, pair.second, B, dists, Delta);
         // }
+
+        if (B.find(i) != B.end()) {
+                std :: cout << "Erase failed in 178 for i: " << i << std :: endl;
+                std :: cout << "Bi size: " << B[i].size() << std :: endl; 
+                exit(123);
+        }
+
         i++;
+
     }
 }
