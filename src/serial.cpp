@@ -96,7 +96,7 @@ void delta_stepping(CSR graph, int source, int num_nodes, int* dists, int* preds
         }
     }
 
-    std::cout << "Light size" << light.size() << std::endl; 
+    std::cout << "Light size: " << light.size() << std::endl; 
 
 
     // initialize tentative distances
@@ -105,10 +105,12 @@ void delta_stepping(CSR graph, int source, int num_nodes, int* dists, int* preds
     }
     
     relax(source, 0, B, dists, Delta);
+    std :: cout << "At begin, B has size: " << B.size() << std :: endl;
     int i = 0;
 
-    
+
     while (!B.empty()) {
+        std :: cout << "i: " << i << "B size: " << B.size() << std :: endl;
         // std::cout << "While B size" << B.size() << std::endl; 
         if (B.find(i) == B.end()) {
             // std:: cout << "B" << "[" << i << "] is empty" << std::endl;
@@ -117,13 +119,10 @@ void delta_stepping(CSR graph, int source, int num_nodes, int* dists, int* preds
         }
         S.clear();
         std::unordered_map<int, int> Req; 
-        std::list<int> B_i = B[i]; 
 
-        // std::cout<< "B_i size" << B_i.size() << "for i = " << i << std::endl;
-
-        while (!B_i.empty()) {
+        while (!B[i].empty()) {
             // initialize Req
-            for (auto v: B_i) {
+            for (auto v: B[i]) {
                 if (light.contains(v)) {
                     for (auto w: light[v]) {
                         // TODO: Fix edge weights
@@ -137,6 +136,7 @@ void delta_stepping(CSR graph, int source, int num_nodes, int* dists, int* preds
                 S.push_back(v);
             }
             B.erase(i);
+            
             for (const auto &pair: Req) {
                 relax(pair.first, pair.second, B, dists, Delta);
             }
@@ -154,9 +154,9 @@ void delta_stepping(CSR graph, int source, int num_nodes, int* dists, int* preds
                 }
             }
         }
-        for (const auto &pair: Req) {
-            relax(pair.first, pair.second, B, dists, Delta);
-        }
+        // for (const auto &pair: Req) {
+        //     relax(pair.first, pair.second, B, dists, Delta);
+        // }
         i++;
     }
 }
