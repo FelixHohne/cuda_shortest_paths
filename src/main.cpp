@@ -123,7 +123,7 @@ int main(int argc, char* argv[]) {
     if (algo == "serial-dijkstra") {
         st_dijkstra(adjList, source_node, max_node, min_distances, p);
     } else if (algo == "serial-delta-stepping") {
-        delta_stepping(graphCSR, source_node, max_node, min_distances, p, 1);
+        delta_stepping(graphCSR, source_node, max_node, min_distances, p, 3);
     } else if (algo == "gpu-bellman-ford") {
         initializeBellmanFord(graphCSR, source_node, max_node, min_distances, p);
     } 
