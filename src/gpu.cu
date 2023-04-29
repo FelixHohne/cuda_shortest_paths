@@ -9,6 +9,8 @@
 #include "gpu.cuh"
 #include <assert.h>
 #include <bits/stdc++.h>
+#include <stdio.h>
+
 
 #define NUM_THREADS 1024
 
@@ -72,13 +74,17 @@ void initializeBellmanFord(CSR graphCSR, int source, int num_nodes, int* d, int*
     
     initialize_dists_array<<<blks, NUM_THREADS>>>(d_dists, graphCSR.numNodes);
 
+    cudaMemcpy(d_row_ptrs, graphCSR.rowPointers, graphCSR.numNodes * sizeof(int), cudaMemcpyHostToDevice);
+
+    cudaMemcpy(d_neighbor_nodes, graphCSR.neighborNodes, graphCSR.numEdges * sizeof(int), cudaMemcpyHostToDevice);
+
+    cudaMemcpy(d_edge_weights, graphCSR.edgeWeights, graphCSR.numEdges * sizeof(int), cudaMemcpyHostToDevice);
+
     for (int i = 0; i < graphCSR.numNodes - 1; i++) {
        BellmanFord<<<blks, NUM_THREADS>>>( graphCSR.numNodes, graphCSR.numEdges, d_dists, d_preds, d_row_ptrs, d_neighbor_nodes, d_edge_weights);
     }
 
     cudaMemcpy(d, d_dists, graphCSR.numNodes * sizeof(int), cudaMemcpyDeviceToHost);
     cudaMemcpy(p, d_preds, graphCSR.numNodes * sizeof(int), cudaMemcpyDeviceToHost);
-
-    std :: cout << "First two elements: " << d[0] << ", " << d[1] << std :: endl; 
 
 }
