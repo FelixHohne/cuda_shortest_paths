@@ -31,6 +31,14 @@ __global__ void BellmanFord(int num_nodes, int num_edges, int* d_dists, int* d_p
             // update d_dist and d_preds
             // distance[v] := distance[tid] + w
             
+
+            // Note: Both of these operations need to be atomic; thus this is incorrect. 
+            // Solution: Using long long int to update both simultaneously. 
+            // https://stackoverflow.com/questions/64397044/how-do-i-apply-atomic-operation-for-struct-on-cuda
+            // https://stackoverflow.com/questions/17411493/how-can-i-implement-a-custom-atomic-function-involving-several-variables
+            // A third approach involves using undefined behavior via union types: 
+            // https://stackoverflow.com/questions/5792704/convert-int2-to-long
+            
             // d_dists[v] = d_dists[tid] + d_edge_weights[i];
             atomicExch(d_dists + v,  d_dists[tid] + d_edge_weights[i]);
             // predecessor[v] := tid
@@ -59,6 +67,7 @@ __global__ void initialize_dists_array(int* d_dists, int num_nodes) {
  * Requires: no negative-weight cycles
  */
 void initializeBellmanFord(CSR graphCSR, int source, int num_nodes, int* d, int* p) {
+    
     int* d_dists;
     int* d_preds;
     int* d_row_ptrs;
