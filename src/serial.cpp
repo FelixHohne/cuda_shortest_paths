@@ -151,22 +151,21 @@ void delta_stepping(CSR graph, int source, int num_nodes, int* dists, int* preds
 
         Req.clear();
 
-
-        // for (auto v: S) {
-        //     if (heavy.contains(v)) {
-        //         for (auto w: heavy[v]) {
-        //             // TODO: Fix edge weights
-        //             int new_distance = dists[v] + 1;
-        //             if (Req.contains(w)) {
-        //                 new_distance = std::min(Req[w], new_distance);
-        //             }
-        //             Req.insert({w, new_distance});
-        //         }
-        //     }
-        // }
-        // for (const auto &pair: Req) {
-        //     relax(pair.first, pair.second, B, dists, Delta);
-        // }
+        for (auto v: S) {
+            if (heavy.contains(v)) {
+                for (auto w: heavy[v]) {
+                    // TODO: Fix edge weights
+                    int new_distance = dists[v] + 1;
+                    if (Req.contains(w)) {
+                        new_distance = std::min(Req[w], new_distance);
+                    }
+                    Req.insert({w, new_distance});
+                }
+            }
+        }
+        for (const auto &pair: Req) {
+            relax(pair.first, pair.second, B, dists, Delta);
+        }
 
         i++;
 
