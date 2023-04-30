@@ -176,10 +176,8 @@ bool compareBucketElements(BucketElement &a, BucketElement &b) {
     return a.bucketIndex < b.bucketIndex;
 }
 
-/*
-For correctness, need to sort B after this call.
-*/
-__global__ void relax(int v, int new_dist, BucketElement* B, int* dists, int* binCounter, int* sizeB, int delta) {
+
+__global__ void relax(int new_dist, BucketElement* d_B, ReqElement* d_Req, int* dists, int delta) {
     // TODO: Figure out how tid and v are actually related. 
     int tid = threadIdx.x + blockDim.x * blockIdx.x;
     if (tid >= num_nodes) {
@@ -189,8 +187,6 @@ __global__ void relax(int v, int new_dist, BucketElement* B, int* dists, int* bi
     // TODO: Update the size of B used for termination. 
     if (new_dist < dists[v]) {
         B[v].bucketId = floor(new_dist / delta); 
-        atomicAdd(binCounter +  bucketId, 1);
-        atomicAdd(sizeB, 1);
     }
 
     dists[v] = new_dist; 
@@ -233,12 +229,46 @@ __global__ void computeLightReq(int* d_B, int* d_light, int* d_row_ptrs, int* d_
             d_Req[old_index] = elem;
         }
     }
-
     
 }
 
+__global__ void update_S_clear_B_i(int* d_B, int* d_S, int i, int num_nodes) {
+    int tid = threadIdx.x + blockDim.x * blockIdx.x;
+    if (tid >= num_nodes) {
+        return;
+    }
+
+    if (d_B[tid].bucketIndex == i) {
+        S[tid] = d_B[tid].nodeId;
+        d_B[tid].bucketIndex = -1; 
+    }
+}
 
 
+int* d_light, int* d_row_ptrs, int* d_edge_weights, int num_nodes, int i, int* d_Req_size) {
+    int tid = threadIdx.x + blockDim.x * blockIdx.x;
+    if (tid >= num_nodes) {
+        return;
+    }
+
+    // Req = {(w, dist[v] + dist(v, w)) : v \in B[i] && (v, w) \in light(v)}
+    if (d_B[tid].bucketIndex != i) {
+        return;
+    }
+
+    int v = d_B[tid].nodeId;
+    for (int i = d_row_ptrs[v]; i < d_row_ptrs[v + 1]; i++) {
+        if (d_light[i] != -1) {
+            ReqElement elem = {
+                .nodeId = d_light[i],
+                .dist = dists[v] + d_edge_weights[i]
+            };
+            int old_index = atomicAdd(&d_Req_size, 1);
+            d_Req[old_index] = elem;
+        }
+    }
+    
+}
 
 
 void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, int* p, int Delta) {
@@ -258,19 +288,10 @@ void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, in
     
 
     int* d_S;
-    int validS = 0; 
     cudaMalloc((void**) &d_S, graphCSR.numNodes * sizeof(int));
 
     BucketElement* d_B; 
     cudaMalloc((void**) &d_B, graphCSR.numNodes * sizeof(BucketElement));
-
-    // (device) total size of all buckets
-    int* dSizeB;
-    cudaMalloc((void**) &dSizeB, sizeof(int));
-    cudaMemset((void**) &dSizeB, 0, sizeof(int));
-
-    // (host) total size of all buckets
-    int hSizeB = 0;
 
     initialize_dists_array<<<node_blks, NUM_THREADS>>>(d_dists, graphCSR.numNodes, source);
 
@@ -306,13 +327,20 @@ void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, in
     cudaMalloc((void**) &d_Req_size, sizeof(int)); 
     cudaMemset((void**) &d_Req_size, 0, sizeof(int));
 
-    while (hSizeB > 0) {
-
+    // TODO: Replace sizeB with kernel to check how many elements of B are actually valid
+    while (sizeB > 0) {
+        
         validS = 0; 
 
         while (bi_size[0] > 0) {
             
             computeLightReq<<<node_blks, NUM_THREADS>>>(d_B, d_light, d_row_ptrs, d_edge_weights, num_nodes, i, d_Req_size);
+
+            update_S_clear_B_i<<<node_blks, NUM_THREADS>>>(
+                d_B, d_S, i, num_nodes
+            );
+
+
             
 
         }
