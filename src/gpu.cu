@@ -11,6 +11,8 @@
 #include <bits/stdc++.h>
 #include <stdio.h>
 #include <sys/time.h>
+#include <thrust/sort.h>
+#include <thrust/execution_policy.h>
 
 
 #define NUM_THREADS 1024
@@ -176,20 +178,29 @@ bool compareBucketElements(BucketElement &a, BucketElement &b) {
     return a.bucketIndex < b.bucketIndex;
 }
 
+struct compareReqElements {
+    __host__ __device__
+    bool operator()(ReqElement &a, ReqEelement &b) {
+        return a.nodeId < b.nodeId || a.dist < b.dist;
+    }
+}
 
-__global__ void relax(int new_dist, BucketElement* d_B, ReqElement* d_Req, int* dists, int delta) {
-    // TODO: Figure out how tid and v are actually related. 
+
+__global__ void relax(BucketElement* d_B, ReqElement* d_Req, int* d_dists, int d_Req_size, int delta) {
     int tid = threadIdx.x + blockDim.x * blockIdx.x;
-    if (tid >= num_nodes) {
+    
+    if (tid > d_Req_size) {
         return;
     }
-    
-    // TODO: Update the size of B used for termination. 
-    if (new_dist < dists[v]) {
-        B[v].bucketId = floor(new_dist / delta); 
-    }
 
-    dists[v] = new_dist; 
+    if (tid == 0 || d_Req[tid].nodeId > d_Req[tid - 1].nodeId) {
+        int v = d_Req[tid].nodeId;
+        int new_dist = d_Req[tid].dist;
+        if (new_dist < d_dists[v]) {
+            d_B[v].bucketIndex = floor(new_dist / delta);
+            d_dists[v] = new_dist;
+        }
+    }
 }
 
 __global__ void initialize_light_heavy_arrays(int* d_light, int* d_heavy, int* d_neighbor_nodes, int* d_edge_weights, int num_edges, int Delta) {
@@ -232,6 +243,17 @@ __global__ void computeLightReq(int* d_B, int* d_light, int* d_row_ptrs, int* d_
     
 }
 
+// S = emptyset
+__global__ void clearS(int* d_S, int num_nodes) {
+    int tid = threadIdx.x + blockDim.x * blockIdx.x;
+    if (tid >= num_nodes) {
+        return;
+    }
+    d_S[tid] = -1;
+}
+
+
+// S = S \Cup B[i]; B[i] = emptyset 
 __global__ void update_S_clear_B_i(int* d_B, int* d_S, int i, int num_nodes) {
     int tid = threadIdx.x + blockDim.x * blockIdx.x;
     if (tid >= num_nodes) {
@@ -242,32 +264,6 @@ __global__ void update_S_clear_B_i(int* d_B, int* d_S, int i, int num_nodes) {
         S[tid] = d_B[tid].nodeId;
         d_B[tid].bucketIndex = -1; 
     }
-}
-
-
-int* d_light, int* d_row_ptrs, int* d_edge_weights, int num_nodes, int i, int* d_Req_size) {
-    int tid = threadIdx.x + blockDim.x * blockIdx.x;
-    if (tid >= num_nodes) {
-        return;
-    }
-
-    // Req = {(w, dist[v] + dist(v, w)) : v \in B[i] && (v, w) \in light(v)}
-    if (d_B[tid].bucketIndex != i) {
-        return;
-    }
-
-    int v = d_B[tid].nodeId;
-    for (int i = d_row_ptrs[v]; i < d_row_ptrs[v + 1]; i++) {
-        if (d_light[i] != -1) {
-            ReqElement elem = {
-                .nodeId = d_light[i],
-                .dist = dists[v] + d_edge_weights[i]
-            };
-            int old_index = atomicAdd(&d_Req_size, 1);
-            d_Req[old_index] = elem;
-        }
-    }
-    
 }
 
 
@@ -292,6 +288,11 @@ void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, in
 
     BucketElement* d_B; 
     cudaMalloc((void**) &d_B, graphCSR.numNodes * sizeof(BucketElement));
+
+    int* d_dists;
+    cudaMalloc((void**) &d_dists, graphCSR.numNodes * sizeof(int));
+    int* d_preds;
+    cudaMalloc((void**) &d_preds, graphCSR.numNodes * sizeof(int));
 
     initialize_dists_array<<<node_blks, NUM_THREADS>>>(d_dists, graphCSR.numNodes, source);
 
@@ -329,8 +330,7 @@ void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, in
 
     // TODO: Replace sizeB with kernel to check how many elements of B are actually valid
     while (sizeB > 0) {
-        
-        validS = 0; 
+        clear_S<<<node_blks, NUM_THREADS>>>(d_S, num_nodes);
 
         while (bi_size[0] > 0) {
             
@@ -339,13 +339,12 @@ void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, in
             update_S_clear_B_i<<<node_blks, NUM_THREADS>>>(
                 d_B, d_S, i, num_nodes
             );
-
-
             
+            thrust::sort(thrust::device, d_Req, d_Req+ d_Req_size, compareReqElements());
 
+            relax<<<edge_blks, NUM_THREADS>>>(d_B, d_Req, d_dists, d_Req_size, delta);
         }
-
-
+        
 
         i++;
         cudaMemcpy(hSizeB, dSizeB, sizeof(int), cudaMemcpyDeviceToHost);
