@@ -161,21 +161,9 @@ void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, in
     cudaMemcpy(p, d_preds, graphCSR.numNodes * sizeof(int), cudaMemcpyDeviceToHost);
 }
 
-
-typedef struct BucketElement {
-    int bucketIndex;
-    int nodeId;      
-} BucketElement;
-
-
 typedef struct ReqElement { 
     int nodeId; 
     int dist;
-}
-
-
-bool compareBucketElements(BucketElement &a, BucketElement &b) {
-    return a.bucketIndex < b.bucketIndex;
 }
 
 struct compareReqElements {
@@ -186,7 +174,7 @@ struct compareReqElements {
 }
 
 
-__global__ void relax(BucketElement* d_B, ReqElement* d_Req, int* d_dists, int d_Req_size, int delta) {
+__global__ void relax(int* d_B, ReqElement* d_Req, int* d_dists, int d_Req_size, int delta) {
     int tid = threadIdx.x + blockDim.x * blockIdx.x;
     
     if (tid > d_Req_size) {
@@ -197,7 +185,7 @@ __global__ void relax(BucketElement* d_B, ReqElement* d_Req, int* d_dists, int d
         int v = d_Req[tid].nodeId;
         int new_dist = d_Req[tid].dist;
         if (new_dist < d_dists[v]) {
-            d_B[v].bucketIndex = floor(new_dist / delta);
+            d_B[v] = floor(new_dist / delta);
             d_dists[v] = new_dist;
         }
     }
@@ -225,11 +213,11 @@ __global__ void computeLightReq(int* d_B, int* d_light, int* d_row_ptrs, int* d_
     }
 
     // Req = {(w, dist[v] + dist(v, w)) : v \in B[i] && (v, w) \in light(v)}
-    if (d_B[tid].bucketIndex != i) {
+    if (d_B[tid] != i) {
         return;
     }
 
-    int v = d_B[tid].nodeId;
+    int v = tid;
     for (int i = d_row_ptrs[v]; i < d_row_ptrs[v + 1]; i++) {
         if (d_light[i] != -1) {
             ReqElement elem = {
@@ -260,12 +248,33 @@ __global__ void update_S_clear_B_i(int* d_B, int* d_S, int i, int num_nodes) {
         return;
     }
 
-    if (d_B[tid].bucketIndex == i) {
-        S[tid] = d_B[tid].nodeId;
-        d_B[tid].bucketIndex = -1; 
+    if (d_B[tid] == i) {
+        S[tid] = tid;
+        d_B[tid] = -1; 
     }
 }
 
+__global__ void is_empty_B(int* d_B, int num_nodes, bool* is_empty) {
+    int tid = threadIdx.x + blockDim.x * blockIdx.x;
+    if (tid >= num_nodes) {
+        return;
+    }
+
+    if (d_B[tid] != -1) {
+        is_empty[0] = false;
+    }
+}
+
+__global__ void is_empty_B_i(int* d_B, int num_nodes, bool* is_empty, int i) {
+    int tid = threadIdx.x + blockDim.x * blockIdx.x;
+    if (tid >= num_nodes) {
+        return;
+    }
+
+    if (d_B[tid] == i) {
+        is_empty[0] = false;
+    }
+}
 
 void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, int* p, int Delta) {
 
@@ -286,8 +295,8 @@ void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, in
     int* d_S;
     cudaMalloc((void**) &d_S, graphCSR.numNodes * sizeof(int));
 
-    BucketElement* d_B; 
-    cudaMalloc((void**) &d_B, graphCSR.numNodes * sizeof(BucketElement));
+    int* d_B; 
+    cudaMalloc((void**) &d_B, graphCSR.numNodes * sizeof(int));
 
     int* d_dists;
     cudaMalloc((void**) &d_dists, graphCSR.numNodes * sizeof(int));
@@ -329,9 +338,15 @@ void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, in
     cudaMemset((void**) &d_Req_size, 0, sizeof(int));
 
     // TODO: Replace sizeB with kernel to check how many elements of B are actually valid
-    while (sizeB > 0) {
+
+    bool* is_empty; 
+    cudaMallocManaged(&is_empty, sizeof(bool)); 
+    is_empty[0] = false; 
+    
+    while (!is_empty[0]) {
         clear_S<<<node_blks, NUM_THREADS>>>(d_S, num_nodes);
 
+    
         while (bi_size[0] > 0) {
             
             computeLightReq<<<node_blks, NUM_THREADS>>>(d_B, d_light, d_row_ptrs, d_edge_weights, num_nodes, i, d_Req_size);
@@ -343,11 +358,13 @@ void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, in
             thrust::sort(thrust::device, d_Req, d_Req+ d_Req_size, compareReqElements());
 
             relax<<<edge_blks, NUM_THREADS>>>(d_B, d_Req, d_dists, d_Req_size, delta);
+            is_empty[0] = true;
+            is_empty_B_i(d_B, num_nodes, is_empty, i);
         }
-        
 
         i++;
-        cudaMemcpy(hSizeB, dSizeB, sizeof(int), cudaMemcpyDeviceToHost);
+        is_empty[0] = true; 
+        is_empty_B(d_B, num_nodes, is_empty); 
     }
 
 
