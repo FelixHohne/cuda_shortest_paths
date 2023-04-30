@@ -126,52 +126,52 @@ void initializeBellmanFord(CSR graphCSR, int source, int num_nodes, int* d, int*
 
 
 
-/**
- * Requires: no negative-weight cycles
- */
-void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, int* p, int Delta) {
+// /**
+//  * Requires: no negative-weight cycles
+//  */
+// void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, int* p, int Delta) {
     
-    int* d_dists;
-    int* d_preds;
-    int* d_row_ptrs;
-    int* d_neighbor_nodes;
-    int* d_edge_weights;
-    int blks = (graphCSR.numNodes + NUM_THREADS - 1) / NUM_THREADS;
+//     int* d_dists;
+//     int* d_preds;
+//     int* d_row_ptrs;
+//     int* d_neighbor_nodes;
+//     int* d_edge_weights;
+//     int blks = (graphCSR.numNodes + NUM_THREADS - 1) / NUM_THREADS;
 
 
-    cudaMalloc((void**) &d_dists, graphCSR.numNodes * sizeof(int));
-    cudaMalloc((void**) &d_preds, graphCSR.numNodes * sizeof(int));
-    cudaMalloc((void**) &d_row_ptrs, graphCSR.numNodes * sizeof(int));
-    cudaMalloc((void**) &d_neighbor_nodes, graphCSR.numEdges * sizeof(int));
-    cudaMalloc((void**) &d_edge_weights, graphCSR.numEdges * sizeof(int));
+//     cudaMalloc((void**) &d_dists, graphCSR.numNodes * sizeof(int));
+//     cudaMalloc((void**) &d_preds, graphCSR.numNodes * sizeof(int));
+//     cudaMalloc((void**) &d_row_ptrs, graphCSR.numNodes * sizeof(int));
+//     cudaMalloc((void**) &d_neighbor_nodes, graphCSR.numEdges * sizeof(int));
+//     cudaMalloc((void**) &d_edge_weights, graphCSR.numEdges * sizeof(int));
     
-    initialize_dists_array<<<blks, NUM_THREADS>>>(d_dists, graphCSR.numNodes);
+//     initialize_dists_array<<<blks, NUM_THREADS>>>(d_dists, graphCSR.numNodes, source);
 
-    cudaMemcpy(d_row_ptrs, graphCSR.rowPointers, graphCSR.numNodes * sizeof(int), cudaMemcpyHostToDevice);
+//     cudaMemcpy(d_row_ptrs, graphCSR.rowPointers, graphCSR.numNodes * sizeof(int), cudaMemcpyHostToDevice);
 
-    cudaMemcpy(d_neighbor_nodes, graphCSR.neighborNodes, graphCSR.numEdges * sizeof(int), cudaMemcpyHostToDevice);
+//     cudaMemcpy(d_neighbor_nodes, graphCSR.neighborNodes, graphCSR.numEdges * sizeof(int), cudaMemcpyHostToDevice);
 
-    cudaMemcpy(d_edge_weights, graphCSR.edgeWeights, graphCSR.numEdges * sizeof(int), cudaMemcpyHostToDevice);
+//     cudaMemcpy(d_edge_weights, graphCSR.edgeWeights, graphCSR.numEdges * sizeof(int), cudaMemcpyHostToDevice);
 
-    for (int i = 0; i < graphCSR.numNodes - 1; i++) {
-       BellmanFord<<<blks, NUM_THREADS>>>( graphCSR.numNodes, graphCSR.numEdges, d_dists, d_preds, d_row_ptrs, d_neighbor_nodes, d_edge_weights);
-    }
+//     for (int i = 0; i < graphCSR.numNodes - 1; i++) {
+//        BellmanFord<<<blks, NUM_THREADS>>>( graphCSR.numNodes, graphCSR.numEdges, d_dists, d_preds, d_row_ptrs, d_neighbor_nodes, d_edge_weights);
+//     }
 
-    cudaMemcpy(d, d_dists, graphCSR.numNodes * sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy(p, d_preds, graphCSR.numNodes * sizeof(int), cudaMemcpyDeviceToHost);
-}
+//     cudaMemcpy(d, d_dists, graphCSR.numNodes * sizeof(int), cudaMemcpyDeviceToHost);
+//     cudaMemcpy(p, d_preds, graphCSR.numNodes * sizeof(int), cudaMemcpyDeviceToHost);
+// }
 
 typedef struct ReqElement { 
     int nodeId; 
     int dist;
-}
+} ReqElement;
 
 struct compareReqElements {
     __host__ __device__
-    bool operator()(ReqElement &a, ReqEelement &b) {
+    bool operator()(ReqElement &a, ReqElement &b) {
         return a.nodeId < b.nodeId || a.dist < b.dist;
     }
-}
+};
 
 
 __global__ void relax(int* d_B, ReqElement* d_Req, int* d_dists, int d_Req_size, int delta) {
@@ -185,7 +185,7 @@ __global__ void relax(int* d_B, ReqElement* d_Req, int* d_dists, int d_Req_size,
         int v = d_Req[tid].nodeId;
         int new_dist = d_Req[tid].dist;
         if (new_dist < d_dists[v]) {
-            d_B[v] = floor(new_dist / delta);
+            d_B[v] = floor((double) new_dist / delta);
             d_dists[v] = new_dist;
         }
     }
@@ -206,7 +206,7 @@ __global__ void initialize_light_heavy_arrays(int* d_light, int* d_heavy, int* d
     }
 }
 
-__global__ void computeLightReq(int* d_B, int* d_light, int* d_row_ptrs, int* d_edge_weights, int num_nodes, int i, int* d_Req_size) {
+__global__ void computeLightReq(int* d_B, int* d_light, int* d_row_ptrs, int* d_edge_weights, int num_nodes, int i, int* d_Req_size, int* d_dists, ReqElement* d_Req) {
     int tid = threadIdx.x + blockDim.x * blockIdx.x;
     if (tid >= num_nodes) {
         return;
@@ -222,9 +222,9 @@ __global__ void computeLightReq(int* d_B, int* d_light, int* d_row_ptrs, int* d_
         if (d_light[i] != -1) {
             ReqElement elem = {
                 .nodeId = d_light[i],
-                .dist = dists[v] + d_edge_weights[i]
+                .dist = d_dists[v] + d_edge_weights[i]
             };
-            int old_index = atomicAdd(&d_Req_size, 1);
+            int old_index = atomicAdd(d_Req_size, 1);
             d_Req[old_index] = elem;
         }
     }
@@ -232,7 +232,7 @@ __global__ void computeLightReq(int* d_B, int* d_light, int* d_row_ptrs, int* d_
 }
 
 // S = emptyset
-__global__ void clearS(int* d_S, int num_nodes) {
+__global__ void clear_S(int* d_S, int num_nodes) {
     int tid = threadIdx.x + blockDim.x * blockIdx.x;
     if (tid >= num_nodes) {
         return;
@@ -249,7 +249,7 @@ __global__ void update_S_clear_B_i(int* d_B, int* d_S, int i, int num_nodes) {
     }
 
     if (d_B[tid] == i) {
-        S[tid] = tid;
+        d_S[tid] = tid;
         d_B[tid] = -1; 
     }
 }
@@ -285,10 +285,13 @@ void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, in
     int* d_neighbor_nodes;
     int* d_edge_weights;
 
-    cudaMemcpy(d_row_ptrs, graphCSR.rowPointers, graphCSR.numNodes * sizeof(int), cudaMemcpyHostToDevice);
+    cudaMalloc((void**) &d_row_ptrs, (graphCSR.numNodes + 1) * sizeof(int));
+    cudaMemcpy(d_row_ptrs, graphCSR.rowPointers, (graphCSR.numNodes + 1) * sizeof(int), cudaMemcpyHostToDevice);
 
+    cudaMalloc((void**) &d_neighbor_nodes, (graphCSR.numEdges) * sizeof(int));
     cudaMemcpy(d_neighbor_nodes, graphCSR.neighborNodes, graphCSR.numEdges * sizeof(int), cudaMemcpyHostToDevice);
 
+    cudaMalloc((void**) &d_edge_weights, (graphCSR.numEdges) * sizeof(int));
     cudaMemcpy(d_edge_weights, graphCSR.edgeWeights, graphCSR.numEdges * sizeof(int), cudaMemcpyHostToDevice);
     
 
@@ -349,7 +352,7 @@ void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, in
     
         while (bi_size[0] > 0) {
             
-            computeLightReq<<<node_blks, NUM_THREADS>>>(d_B, d_light, d_row_ptrs, d_edge_weights, num_nodes, i, d_Req_size);
+            computeLightReq<<<node_blks, NUM_THREADS>>>(d_B, d_light, d_row_ptrs, d_edge_weights, num_nodes, i, d_Req_size, d_dists, d_Req);
 
             update_S_clear_B_i<<<node_blks, NUM_THREADS>>>(
                 d_B, d_S, i, num_nodes
@@ -357,14 +360,14 @@ void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, in
             
             thrust::sort(thrust::device, d_Req, d_Req+ d_Req_size, compareReqElements());
 
-            relax<<<edge_blks, NUM_THREADS>>>(d_B, d_Req, d_dists, d_Req_size, delta);
+            relax<<<edge_blks, NUM_THREADS>>>(d_B, d_Req, d_dists, *d_Req_size, Delta);
             is_empty[0] = true;
-            is_empty_B_i(d_B, num_nodes, is_empty, i);
+            is_empty_B_i<<<node_blks, NUM_THREADS>>>(d_B, num_nodes, is_empty, i);
         }
 
         i++;
         is_empty[0] = true; 
-        is_empty_B(d_B, num_nodes, is_empty); 
+        is_empty_B<<<node_blks, NUM_THREADS>>>(d_B, num_nodes, is_empty); 
     }
 
 
