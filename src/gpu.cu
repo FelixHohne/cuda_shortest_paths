@@ -165,6 +165,13 @@ typedef struct BucketElement {
     int nodeId;      
 } BucketElement;
 
+
+typedef struct ReqElement { 
+    int nodeId; 
+    int dist;
+}
+
+
 bool compareBucketElements(BucketElement &a, BucketElement &b) {
     return a.bucketIndex < b.bucketIndex;
 }
@@ -204,9 +211,40 @@ __global__ void initialize_light_heavy_arrays(int* d_light, int* d_heavy, int* d
     }
 }
 
+__global__ void computeLightReq(int* d_B, int* d_light, int* d_row_ptrs, int* d_edge_weights, int num_nodes, int i, int* d_Req_size) {
+    int tid = threadIdx.x + blockDim.x * blockIdx.x;
+    if (tid >= num_nodes) {
+        return;
+    }
+
+    // Req = {(w, dist[v] + dist(v, w)) : v \in B[i] && (v, w) \in light(v)}
+    if (d_B[tid].bucketIndex != i) {
+        return;
+    }
+
+    int v = d_B[tid].nodeId;
+    for (int i = d_row_ptrs[v]; i < d_row_ptrs[v + 1]; i++) {
+        if (d_light[i] != -1) {
+            ReqElement elem = {
+                .nodeId = d_light[i],
+                .dist = dists[v] + d_edge_weights[i]
+            };
+            int old_index = atomicAdd(&d_Req_size, 1);
+            d_Req[old_index] = elem;
+        }
+    }
+
+    
+}
+
+
+
+
+
 void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, int* p, int Delta) {
 
-    int blks = (graphCSR.numNodes + NUM_THREADS - 1) / NUM_THREADS;
+    int node_blks = (graphCSR.numNodes + NUM_THREADS - 1) / NUM_THREADS;
+    int edge_blks = (graphCSR.numEdges + NUM_THREADS - 1) / NUM_THREADS;
 
     int* d_row_ptrs;
     int* d_neighbor_nodes;
@@ -226,10 +264,6 @@ void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, in
     BucketElement* d_B; 
     cudaMalloc((void**) &d_B, graphCSR.numNodes * sizeof(BucketElement));
 
-    int* bucketCounter;
-    cudaMalloc((void**) &bucketCounter, graphCSR.numNodes * sizeof(int));
-    cudaMemset((void**) &bucketCounter, 0, graphCSR.numNodes * sizeof(int));
-
     // (device) total size of all buckets
     int* dSizeB;
     cudaMalloc((void**) &dSizeB, sizeof(int));
@@ -238,11 +272,7 @@ void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, in
     // (host) total size of all buckets
     int hSizeB = 0;
 
-    initialize_dists_array<<<blks, NUM_THREADS>>>(d_dists, graphCSR.numNodes, source);
-
-    
-
-    
+    initialize_dists_array<<<node_blks, NUM_THREADS>>>(d_dists, graphCSR.numNodes, source);
 
     /*
     d_light and d_heavy are arrays of the same length as graphCSR.numEdges
@@ -255,11 +285,40 @@ void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, in
     int* d_heavy;
     cudaMalloc((void**) &d_light, graphCSR.numEdges * sizeof(int));
     cudaMalloc((void**) &d_heavy, graphCSR.numEdges * sizeof(int));
-    initialize_light_heavy_arrays<<<blks, NUM_THREADS>>>(d_light, d_heavy, d_neighbor_nodes, d_edge_weights, graphCSR.numEdges, Delta);
+    initialize_light_heavy_arrays<<<edge_blks, NUM_THREADS>>>(d_light, d_heavy, d_neighbor_nodes, d_edge_weights, graphCSR.numEdges, Delta);
 
     int i = 0; 
+
+    // used to test isEmpty(B[i]) 
+    int* bi_size = new int[1];
+    bi_size[0] = 1;
+    int* d_bi_size; 
+
+    cudaMalloc((void**) &d_bi_size, sizeof(int)); 
+    cudaMemset((void**) &d_bi_size, 0, sizeof(int));
+
+    // Device Req array
+    // Elements up to d_Req_size are correct, beyond is garbage
+    ReqElement* d_Req; 
+    cudaMalloc((void**) &d_Req, graphCSR.numEdges * sizeof(ReqElement)); 
+
+    int* d_Req_size; 
+    cudaMalloc((void**) &d_Req_size, sizeof(int)); 
+    cudaMemset((void**) &d_Req_size, 0, sizeof(int));
+
     while (hSizeB > 0) {
-        
+
+        validS = 0; 
+
+        while (bi_size[0] > 0) {
+            
+            computeLightReq<<<node_blks, NUM_THREADS>>>(d_B, d_light, d_row_ptrs, d_edge_weights, num_nodes, i, d_Req_size);
+            
+
+        }
+
+
+
         i++;
         cudaMemcpy(hSizeB, dSizeB, sizeof(int), cudaMemcpyDeviceToHost);
     }
