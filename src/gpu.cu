@@ -231,6 +231,31 @@ __global__ void computeLightReq(int* d_B, int* d_light, int* d_row_ptrs, int* d_
     
 }
 
+__global__ void computeHeavyReq(int* d_S, int* d_heavy, int* d_row_ptrs, int* d_edge_weights, int num_nodes, int i, int* d_Req_size, int* d_dists, ReqElement* d_Req) {
+    int tid = threadIdx.x + blockDim.x * blockIdx.x;
+    if (tid >= num_nodes) {
+        return;
+    }
+
+    // Req = {(w, dist[v] + dist(v, w)) : v \in B[i] && (v, w) \in light(v)}
+    if (d_S[tid] != i) {
+        return;
+    }
+
+    int v = tid;
+    for (int i = d_row_ptrs[v]; i < d_row_ptrs[v + 1]; i++) {
+        if (d_heavy[i] != -1) {
+            ReqElement elem = {
+                .nodeId = d_heavy[i],
+                .dist = d_dists[v] + d_edge_weights[i]
+            };
+            int old_index = atomicAdd(d_Req_size, 1);
+            d_Req[old_index] = elem;
+        }
+    }
+    
+}
+
 // S = emptyset
 __global__ void clear_S(int* d_S, int num_nodes) {
     int tid = threadIdx.x + blockDim.x * blockIdx.x;
@@ -364,6 +389,13 @@ void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, in
             is_empty[0] = true;
             is_empty_B_i<<<node_blks, NUM_THREADS>>>(d_B, num_nodes, is_empty, i);
         }
+        
+        // Just set d_Req_size = 0 to clear Req?
+        cudaMemset((void**) &d_Req_size, 0, sizeof(int));
+
+        computeHeavyReq<<<node_blks, NUM_THREADS>>>(d_S, d_heavy, d_row_ptrs, d_edge_weights, num_nodes, i, d_Req_size, d_dists, d_Req);
+
+        relax<<<edge_blks, NUM_THREADS>>>(d_B, d_Req, d_dists, *d_Req_size, Delta);
 
         i++;
         is_empty[0] = true; 
