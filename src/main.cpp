@@ -122,15 +122,19 @@ int main(int argc, char* argv[]) {
     auto start_algo = std::chrono::steady_clock::now();
     int* min_distances = new int[max_node]; 
     int* p = new int[max_node]; 
+    int Delta = 3; 
 
     std::cout << "Running algorithm " << algo << std::endl;
     if (algo == "serial-dijkstra") {
         st_dijkstra(adjList, source_node, max_node, min_distances, p);
     } else if (algo == "serial-delta-stepping") {
-        delta_stepping(graphCSR, source_node, max_node, min_distances, p, 3);
+        delta_stepping(graphCSR, source_node, max_node, min_distances, p, Delta);
     } else if (algo == "gpu-bellman-ford") {
         initializeBellmanFord(graphCSR, source_node, max_node, min_distances, p);
     } 
+    else if (algo == "gpu-delta-stepping") {
+        initializeDeltaStepping(graphCSR, source_node, max_node, min_distances, p, Delta); 
+    }
     else {
         std::cout<<"Invalid algorithm provided. " << std::endl;
         std::cout << "-a <algo>: set the algorithm to run" << std::endl;
