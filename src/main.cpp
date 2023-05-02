@@ -87,6 +87,7 @@ int main(int argc, char* argv[]) {
 
     std::string output_file = find_string_arg(argc, argv, "-o", "");
 
+    std::cout<< "Parsing edge list" << std::endl;
     // construct adjacency list
     auto [parsed_edge_list, max_node] = read_edge_list(input_file);
     if (DEBUG_PRINT) {
@@ -94,11 +95,13 @@ int main(int argc, char* argv[]) {
         std::cout << "Number of edges in the graph: " << parsed_edge_list.size() << std :: endl;
     }
 
+    std::cout<<"Finished parsing edge list" << std::endl;
     if (DEBUG_PRINT) {
         print_edge_list(parsed_edge_list);
     }
     std::unordered_map<int, std::list<int>> adjList = construct_adj_list(parsed_edge_list);
 
+    std::cout<<"Constructed adjacency list" << std::endl;
 
     if (DEBUG_PRINT) {
         std::cout << "Number of edges of node 9721 " << adjList[9721].size() << std::endl;
@@ -110,6 +113,7 @@ int main(int argc, char* argv[]) {
     
 
     CSR graphCSR = construct_sparse_CSR(adjList, max_node);
+    std::cout<<"Constructed sparse CSR representation" << std::endl;
     if (DEBUG_PRINT) {
         print_adj_list(adjList);
     }
@@ -127,6 +131,10 @@ int main(int argc, char* argv[]) {
     } else if (algo == "gpu-bellman-ford") {
         initializeBellmanFord(graphCSR, source_node, max_node, min_distances, p);
     } 
+    else {
+        std::cout<<"Invalid algorithm provided. " << std::endl;
+        std::cout << "-a <algo>: set the algorithm to run" << std::endl;
+    }
 
     auto end_algo = std::chrono::steady_clock::now();
     std::chrono::duration<double> get_algo_time = end_algo - start_algo;
@@ -164,7 +172,7 @@ int main(int argc, char* argv[]) {
     }
 
     // free memory
-    delete[] min_distances;
-    delete[] p; 
+    // delete[] min_distances;
+    // delete[] p; 
     return 0;
 }

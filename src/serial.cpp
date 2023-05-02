@@ -16,7 +16,7 @@
 // Assume no max path length over INT_MAX.
 const int INF = INT_MAX;
 
-void st_dijkstra(std::unordered_map<int, std::list<int>> adjList, int source, 
+void st_dijkstra(std::unordered_map<int, std::list<int>>& adjList, int source, 
 int num_nodes, int* d, int* p) {
     /*
      * Note: Implementation using Red-Black Tree via std::set.
@@ -47,7 +47,8 @@ int num_nodes, int* d, int* p) {
             }
         }
     }
-   
+
+    std :: cout << "Finished Dijkstra" << std :: endl;
 }
 
 void relax(int v, int new_dist, std::unordered_map<int, std::list<int>>& B, int* dists, int delta) {
@@ -76,7 +77,11 @@ void relax(int v, int new_dist, std::unordered_map<int, std::list<int>>& B, int*
 }
 
 void delta_stepping(CSR graph, int source, int num_nodes, int* dists, int* preds, int Delta) {
-    // TODO: implement
+    for (int i = 0; i < num_nodes; i++) {
+        dists[i] = INF; 
+        preds[i] = -1;
+    }
+
     std::unordered_map<int, std::list<int>> heavy;
     std::unordered_map<int, std::list<int>> light;
     std::unordered_map<int, std::list<int>> B;
@@ -103,11 +108,6 @@ void delta_stepping(CSR graph, int source, int num_nodes, int* dists, int* preds
         if (!light_list.empty()) {
             light.insert({i, light_list});
         }
-    }
-
-    // initialize tentative distances
-    for (int i = 0; i < num_nodes; i++) {
-        dists[i] = INT_MAX;
     }
     
     relax(source, 0, B, dists, Delta);
@@ -147,8 +147,6 @@ void delta_stepping(CSR graph, int source, int num_nodes, int* dists, int* preds
             }
 
         }
-
-
         Req.clear();
 
         for (auto v: S) {
@@ -170,4 +168,6 @@ void delta_stepping(CSR graph, int source, int num_nodes, int* dists, int* preds
         i++;
 
     }
+
+    std::cout<<dists[0] << std::endl;
 }
