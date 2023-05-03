@@ -57,7 +57,7 @@ __global__ void BellmanFord(int num_nodes, int num_edges, int* d_dists, int* d_p
     }
 }
 
-__global__ void initialize_dists_array(int* d_dists, int num_nodes, int source) {
+__global__ void initialize_dists_array(int* d_dists, int num_nodes, int source, bool set_source) {
     int tid = threadIdx.x + blockDim.x * blockIdx.x;
     if (tid >= num_nodes) {
         return;
@@ -65,7 +65,8 @@ __global__ void initialize_dists_array(int* d_dists, int num_nodes, int source) 
     
     d_dists[tid] = INT_MAX; 
     
-    if (tid == 0) {
+
+    if (set_source && tid == 0) {
         d_dists[source] = 0;
     }
 }
@@ -92,7 +93,7 @@ void initializeBellmanFord(CSR graphCSR, int source, int num_nodes, int* d, int*
 
     gettimeofday(&start, 0);
 
-    initialize_dists_array<<<blks, NUM_THREADS>>>(d_dists, graphCSR.numNodes, source);
+    initialize_dists_array<<<blks, NUM_THREADS>>>(d_dists, graphCSR.numNodes, source, true);
     
     cudaDeviceSynchronize();
     gettimeofday(&stop, 0);
@@ -126,41 +127,6 @@ void initializeBellmanFord(CSR graphCSR, int source, int num_nodes, int* d, int*
 
 
 
-// /**
-//  * Requires: no negative-weight cycles
-//  */
-// void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, int* p, int Delta) {
-    
-//     int* d_dists;
-//     int* d_preds;
-//     int* d_row_ptrs;
-//     int* d_neighbor_nodes;
-//     int* d_edge_weights;
-//     int blks = (graphCSR.numNodes + NUM_THREADS - 1) / NUM_THREADS;
-
-
-//     cudaMalloc((void**) &d_dists, graphCSR.numNodes * sizeof(int));
-//     cudaMalloc((void**) &d_preds, graphCSR.numNodes * sizeof(int));
-//     cudaMalloc((void**) &d_row_ptrs, graphCSR.numNodes * sizeof(int));
-//     cudaMalloc((void**) &d_neighbor_nodes, graphCSR.numEdges * sizeof(int));
-//     cudaMalloc((void**) &d_edge_weights, graphCSR.numEdges * sizeof(int));
-    
-//     initialize_dists_array<<<blks, NUM_THREADS>>>(d_dists, graphCSR.numNodes, source);
-
-//     cudaMemcpy(d_row_ptrs, graphCSR.rowPointers, graphCSR.numNodes * sizeof(int), cudaMemcpyHostToDevice);
-
-//     cudaMemcpy(d_neighbor_nodes, graphCSR.neighborNodes, graphCSR.numEdges * sizeof(int), cudaMemcpyHostToDevice);
-
-//     cudaMemcpy(d_edge_weights, graphCSR.edgeWeights, graphCSR.numEdges * sizeof(int), cudaMemcpyHostToDevice);
-
-//     for (int i = 0; i < graphCSR.numNodes - 1; i++) {
-//        BellmanFord<<<blks, NUM_THREADS>>>( graphCSR.numNodes, graphCSR.numEdges, d_dists, d_preds, d_row_ptrs, d_neighbor_nodes, d_edge_weights);
-//     }
-
-//     cudaMemcpy(d, d_dists, graphCSR.numNodes * sizeof(int), cudaMemcpyDeviceToHost);
-//     cudaMemcpy(p, d_preds, graphCSR.numNodes * sizeof(int), cudaMemcpyDeviceToHost);
-// }
-
 typedef struct ReqElement { 
     int nodeId; 
     int dist;
@@ -174,6 +140,10 @@ typedef struct ReqElement {
 __global__ void relax(int* d_B, ReqElement* d_Req, int* d_dists, int d_Req_size, int delta) {
     int tid = threadIdx.x + blockDim.x * blockIdx.x;
     
+    if (tid == 0) {
+        printf("d_dists[0]: %d\n", d_dists[0]);
+    }
+
     if (tid > d_Req_size) {
         return;
     }
@@ -333,7 +303,7 @@ void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, in
     int* d_preds;
     cudaMalloc((void**) &d_preds, graphCSR.numNodes * sizeof(int));
 
-    initialize_dists_array<<<node_blks, NUM_THREADS>>>(d_dists, graphCSR.numNodes, source);
+    initialize_dists_array<<<node_blks, NUM_THREADS>>>(d_dists, graphCSR.numNodes, source, false);
 
     /*
     d_light and d_heavy are arrays of the same length as graphCSR.numEdges
