@@ -160,10 +160,6 @@ typedef struct ReqElement {
 
 __global__ void relax(int* d_B, ReqElement* d_Req, int* d_dists, int d_Req_size, int delta) {
     int tid = threadIdx.x + blockDim.x * blockIdx.x;
-    
-    if (tid == 0) {
-        printf("d_dists[0]: %d\n", d_dists[0]);
-    }
 
     if (tid > d_Req_size) {
         return;
@@ -172,7 +168,6 @@ __global__ void relax(int* d_B, ReqElement* d_Req, int* d_dists, int d_Req_size,
     if (tid == 0 || d_Req[tid].nodeId > d_Req[tid - 1].nodeId) {
         int v = d_Req[tid].nodeId;
         int new_dist = d_Req[tid].dist;
-        printf("d_dists[v]: %d, new_dist: %d\n", d_dists[v], new_dist);
         if (new_dist < d_dists[v]) {
             // printf("d_dists[v]: %d, new_dist: %d\n", d_dists[v], new_dist);
             d_B[v] = floor((double) new_dist / delta);
@@ -203,19 +198,13 @@ __global__ void computeLightReq(int* d_B, int* d_light, int* d_row_ptrs, int* d_
     if (tid >= num_nodes) {
         return;
     }
-
-    printf("light req: dB thread: %d, dB value: %d, i: %d\n", tid, d_B[tid], i);
-
     // Req = {(w, dist[v] + dist(v, w)) : v \in B[i] && (v, w) \in light(v)}
     if (d_B[tid] != i) {
         return;
     }
 
     int v = tid;
-    printf("Remaining id: %d\n", v); 
-    printf("Hello World v2\n");
     for (int i = d_row_ptrs[v]; i < d_row_ptrs[v + 1]; i++) {
-        printf("Visiting neighbor: %d\n", i);
         if (d_light[i] != -1) {
             ReqElement elem = {
                 .nodeId = d_light[i],
@@ -226,12 +215,25 @@ __global__ void computeLightReq(int* d_B, int* d_light, int* d_row_ptrs, int* d_
         }
     }
 
-    printf("updated light req: dB thread: %d, dB value: %d\n", tid, d_B[tid]);
-    printf("hello world\n");
+    for (int j = 0; j < d_Req_size[0]; j++) {
+        printf("curReq: %d\n", d_Req[j].nodeId); 
+    }
+
+    printf("Hello World\n");
 
 
 }
 
+__global__ void printB(int* d_B, int num_nodes) {
+
+    int tid = threadIdx.x + blockDim.x * blockIdx.x;
+    if (tid >= num_nodes) {
+        return;
+    }
+
+    printf("d_B element %d: %d", tid, d_B[tid]);
+    printf("\n");
+}
 __global__ void computeHeavyReq(int* d_S, int* d_heavy, int* d_row_ptrs, int* d_edge_weights, int num_nodes, int i, int* d_Req_size, int* d_dists, ReqElement* d_Req) {
     int tid = threadIdx.x + blockDim.x * blockIdx.x;
     if (tid >= num_nodes) {
@@ -293,13 +295,16 @@ __global__ void is_empty_B(int* d_B, int num_nodes, bool* is_empty) {
 
 __global__ void is_empty_B_i(int* d_B, int num_nodes, bool* is_empty, int i) {
     int tid = threadIdx.x + blockDim.x * blockIdx.x;
+    
     if (tid >= num_nodes) {
         return;
     }
 
     if (d_B[tid] == i) {
+        printf("is empty false\n");
         is_empty[0] = false;
     }
+
 }
 
 void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int* p, int Delta) {
@@ -365,7 +370,10 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
     is_empty[0] = false; 
 
     delta_stepping_initialize<<<node_blks, NUM_THREADS>>>(d_dists, d_B, graphCSR.numNodes, source);
-    
+    std :: cout << "Before while loop" << std :: endl;
+
+    printB<<<node_blks, NUM_THREADS>>>(d_B, num_nodes);
+
     while (!is_empty[0]) {
         clear_S<<<node_blks, NUM_THREADS>>>(d_S, num_nodes);
     
@@ -384,6 +392,16 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
                 d_B, d_S, i, num_nodes
             );
 
+            std :: cout << "Before clear" << std :: endl;
+            printB<<<node_blks, NUM_THREADS>>>(d_B, num_nodes);
+
+            cudaDeviceSynchronize();
+
+            std :: cout << "After clear: " << std :: endl;
+            printB<<<node_blks, NUM_THREADS>>>(d_B, num_nodes);
+
+            cudaDeviceSynchronize();
+
 
             if (d_Req_size[0] > 0) {
                 thrust::sort(thrust::device, d_Req, d_Req + d_Req_size[0]);
@@ -393,9 +411,23 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
             std :: cout << "dReq size: " << d_Req_size[0] << std :: endl;
 
             relax<<<edge_blks, NUM_THREADS>>>(d_B, d_Req, d_dists, d_Req_size[0], Delta);
+            std :: cout << "After relax" << std :: endl;
+            printB<<<node_blks, NUM_THREADS>>>(d_B, num_nodes);
+
             cudaDeviceSynchronize();
             is_empty[0] = true;
             is_empty_B_i<<<node_blks, NUM_THREADS>>>(d_B, num_nodes, is_empty, i);
+            
+            // Note this line is required for correctness, as otherwise the updates to is_empty 
+            // will not propagate to host code. 
+            cudaDeviceSynchronize();
+            std :: cout << "B_i done: " << std :: endl;
+            if (is_empty[0]) {
+                std :: cout << "True" << std :: endl;
+            }
+            else {
+                std:: cout << "False" << std :: endl;
+            }
         }
         
         // Just set d_Req_size = 0 to clear Req?
