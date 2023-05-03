@@ -38,13 +38,15 @@ std::unordered_map<int, std::list<int>> construct_adj_list(std::list<std::pair<i
 }
 
 
-CSR construct_sparse_CSR(std::unordered_map<int, std::list<int>> adj_list, int num_nodes) {
+CSR construct_sparse_CSR(std::unordered_map<int, std::list<int>> adj_list, int max_node) {
+    int num_nodes = max_node + 1; 
     int* row_pointers = new int[num_nodes + 1];
     int num_edges = 0;
 
     for (auto const p: adj_list) {
         num_edges = num_edges + p.second.size();
     }
+
 
     // ids of neighbor nodes in adj_list
     int* neighbor_nodes = new int[num_edges];
@@ -72,6 +74,7 @@ CSR construct_sparse_CSR(std::unordered_map<int, std::list<int>> adj_list, int n
         // note row_pointers[0] should always be 0
         row_pointers[i + 1] = num_edges_added;
     }
+
 
     CSR graph_CSR = {
         .numNodes = num_nodes,

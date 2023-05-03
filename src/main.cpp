@@ -43,7 +43,8 @@ bool DEBUG_PRINT = false;
 std::vector<std::string> algos{
     "serial-dijkstra",
     "serial-delta-stepping",
-    "gpu-bellman-ford"
+    "gpu-bellman-ford", 
+    "gpu-delta-stepping"
 };
 
 int main(int argc, char* argv[]) {
