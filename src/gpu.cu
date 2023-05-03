@@ -183,6 +183,7 @@ __global__ void initialize_light_heavy_arrays(int* d_light, int* d_heavy, int* d
     }
 
     if (d_edge_weights[tid] > Delta) {
+        printf("Constructing heavy edges\n");
         d_heavy[tid] = d_neighbor_nodes[tid];
         d_light[tid] = -1;
     } else {
@@ -231,7 +232,7 @@ __global__ void printB(int* d_B, int num_nodes) {
         return;
     }
 
-    printf("d_B element %d: %d", tid, d_B[tid]);
+    printf("d_B element %d: %d      ", tid, d_B[tid]);
     printf("\n");
 }
 __global__ void computeHeavyReq(int* d_S, int* d_heavy, int* d_row_ptrs, int* d_edge_weights, int num_nodes, int i, int* d_Req_size, int* d_dists, ReqElement* d_Req) {
@@ -376,7 +377,7 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
 
     while (!is_empty[0]) {
         clear_S<<<node_blks, NUM_THREADS>>>(d_S, num_nodes);
-    
+        d_Req_size[0] = 0; 
         // Checks if B_i is not empty. 
         // First iteration, B_i never empty. 
         // In later iterations, is_empty_Bi will update is_empty. 
@@ -388,14 +389,17 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
             cudaDeviceSynchronize();
             std::cout<<"early d Req size: " << d_Req_size[0] << std :: endl;
 
-            update_S_clear_B_i<<<node_blks, NUM_THREADS>>>(
-                d_B, d_S, i, num_nodes
-            );
 
             std :: cout << "Before clear" << std :: endl;
             printB<<<node_blks, NUM_THREADS>>>(d_B, num_nodes);
 
             cudaDeviceSynchronize();
+
+            update_S_clear_B_i<<<node_blks, NUM_THREADS>>>(
+                d_B, d_S, i, num_nodes
+            );
+
+ 
 
             std :: cout << "After clear: " << std :: endl;
             printB<<<node_blks, NUM_THREADS>>>(d_B, num_nodes);
@@ -413,6 +417,7 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
             relax<<<edge_blks, NUM_THREADS>>>(d_B, d_Req, d_dists, d_Req_size[0], Delta);
             std :: cout << "After relax" << std :: endl;
             printB<<<node_blks, NUM_THREADS>>>(d_B, num_nodes);
+            std::cout<< "Flush" << std :: endl;
 
             cudaDeviceSynchronize();
             is_empty[0] = true;
@@ -430,17 +435,30 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
             }
         }
         
-        // Just set d_Req_size = 0 to clear Req?
-        cudaMemset((void**) &d_Req_size, 0, sizeof(int));
+        // Clear Req. 
+        d_Req_size[0] = 0; 
 
         computeHeavyReq<<<node_blks, NUM_THREADS>>>(d_S, d_heavy, d_row_ptrs, d_edge_weights, num_nodes, i, d_Req_size, d_dists, d_Req);
 
+        cudaDeviceSynchronize(); 
+        std :: cout << "Heavy d_Req size: " << d_Req_size[0] << std :: endl;
+        cudaDeviceSynchronize(); 
         relax<<<edge_blks, NUM_THREADS>>>(d_B, d_Req, d_dists, *d_Req_size, Delta);
+        
         cudaDeviceSynchronize();
 
+        std :: cout << "After relax" << std :: endl;
+        printB<<<node_blks, NUM_THREADS>>>(d_B, num_nodes);
+        std::cout<< "Flush" << std :: endl;
+
+        cudaDeviceSynchronize();
         i++;
         is_empty[0] = true; 
         is_empty_B<<<node_blks, NUM_THREADS>>>(d_B, num_nodes, is_empty); 
+
+        // Note this line is required for correctness, as otherwise the updates to is_empty 
+        // will not propagate to host code. 
+        cudaDeviceSynchronize();
     }
 
 
