@@ -57,7 +57,7 @@ __global__ void BellmanFord(int num_nodes, int num_edges, int* d_dists, int* d_p
     }
 }
 
-__global__ void initialize_dists_array(int* d_dists, int num_nodes, int source, bool set_source) {
+__global__ void bellman_initialize_dists_array(int* d_dists, int num_nodes, int source) {
     int tid = threadIdx.x + blockDim.x * blockIdx.x;
     if (tid >= num_nodes) {
         return;
@@ -66,7 +66,7 @@ __global__ void initialize_dists_array(int* d_dists, int num_nodes, int source, 
     d_dists[tid] = INT_MAX; 
     
 
-    if (set_source && tid == 0) {
+    if (tid == 0) {
         d_dists[source] = 0;
     }
 }
@@ -93,7 +93,7 @@ void initializeBellmanFord(CSR graphCSR, int source, int num_nodes, int* d, int*
 
     gettimeofday(&start, 0);
 
-    initialize_dists_array<<<blks, NUM_THREADS>>>(d_dists, graphCSR.numNodes, source, true);
+    bellman_initialize_dists_array<<<blks, NUM_THREADS>>>(d_dists, graphCSR.numNodes, source);
     
     cudaDeviceSynchronize();
     gettimeofday(&stop, 0);
@@ -126,6 +126,27 @@ void initializeBellmanFord(CSR graphCSR, int source, int num_nodes, int* d, int*
 }
 
 
+// ___________________________________________________________________
+
+
+// Initializes d_dists to INT_MAX 
+// Sets source distance to 0 
+// Clears B[i]
+// Adds source to B[i]. 
+__global__ void delta_stepping_initialize(int* d_dists, int* d_B, int num_nodes, int source) {
+    int tid = threadIdx.x + blockDim.x * blockIdx.x;
+    if (tid >= num_nodes) {
+        return;
+    }
+    
+    d_dists[tid] = INT_MAX; 
+    d_B[tid] = -1;
+    
+    if (tid == source) {
+        d_dists[source] = 0;
+        d_B[source] = 0; 
+    }
+}
 
 typedef struct ReqElement { 
     int nodeId; 
@@ -151,7 +172,9 @@ __global__ void relax(int* d_B, ReqElement* d_Req, int* d_dists, int d_Req_size,
     if (tid == 0 || d_Req[tid].nodeId > d_Req[tid - 1].nodeId) {
         int v = d_Req[tid].nodeId;
         int new_dist = d_Req[tid].dist;
+        printf("d_dists[v]: %d, new_dist: %d\n", d_dists[v], new_dist);
         if (new_dist < d_dists[v]) {
+            // printf("d_dists[v]: %d, new_dist: %d\n", d_dists[v], new_dist);
             d_B[v] = floor((double) new_dist / delta);
             d_dists[v] = new_dist;
         }
@@ -174,11 +197,14 @@ __global__ void initialize_light_heavy_arrays(int* d_light, int* d_heavy, int* d
 
 }
 
+// Node-based parallelization.
 __global__ void computeLightReq(int* d_B, int* d_light, int* d_row_ptrs, int* d_edge_weights, int num_nodes, int i, int* d_Req_size, int* d_dists, ReqElement* d_Req) {
     int tid = threadIdx.x + blockDim.x * blockIdx.x;
     if (tid >= num_nodes) {
         return;
     }
+
+    printf("light req: dB thread: %d, dB value: %d, i: %d\n", tid, d_B[tid], i);
 
     // Req = {(w, dist[v] + dist(v, w)) : v \in B[i] && (v, w) \in light(v)}
     if (d_B[tid] != i) {
@@ -186,19 +212,24 @@ __global__ void computeLightReq(int* d_B, int* d_light, int* d_row_ptrs, int* d_
     }
 
     int v = tid;
+    printf("Remaining id: %d\n", v); 
+    printf("Hello World v2\n");
     for (int i = d_row_ptrs[v]; i < d_row_ptrs[v + 1]; i++) {
+        printf("Visiting neighbor: %d\n", i);
         if (d_light[i] != -1) {
             ReqElement elem = {
                 .nodeId = d_light[i],
                 .dist = d_dists[v] + d_edge_weights[i]
             };
             int old_index = atomicAdd(d_Req_size, 1);
-            printf("Updating req\n");
             d_Req[old_index] = elem;
         }
     }
 
-    
+    printf("updated light req: dB thread: %d, dB value: %d\n", tid, d_B[tid]);
+    printf("hello world\n");
+
+
 }
 
 __global__ void computeHeavyReq(int* d_S, int* d_heavy, int* d_row_ptrs, int* d_edge_weights, int num_nodes, int i, int* d_Req_size, int* d_dists, ReqElement* d_Req) {
@@ -271,8 +302,10 @@ __global__ void is_empty_B_i(int* d_B, int num_nodes, bool* is_empty, int i) {
     }
 }
 
-void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, int* p, int Delta) {
+void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int* p, int Delta) {
 
+    int num_nodes = max_node + 1; 
+    std :: cout << "max node: " << max_node << "num nodes:" << num_nodes << std :: endl;
     std::cout << "Begin CUDA Delta Stepping" << std::endl;
     int node_blks = (graphCSR.numNodes + NUM_THREADS - 1) / NUM_THREADS;
     int edge_blks = (graphCSR.numEdges + NUM_THREADS - 1) / NUM_THREADS;
@@ -303,8 +336,6 @@ void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, in
     int* d_preds;
     cudaMalloc((void**) &d_preds, graphCSR.numNodes * sizeof(int));
 
-    initialize_dists_array<<<node_blks, NUM_THREADS>>>(d_dists, graphCSR.numNodes, source, false);
-
     /*
     d_light and d_heavy are arrays of the same length as graphCSR.numEdges
     They contain a valid node id if the neighbor node corresponds to
@@ -332,6 +363,8 @@ void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, in
     bool* is_empty; 
     cudaMallocManaged(&is_empty, sizeof(bool)); 
     is_empty[0] = false; 
+
+    delta_stepping_initialize<<<node_blks, NUM_THREADS>>>(d_dists, d_B, graphCSR.numNodes, source);
     
     while (!is_empty[0]) {
         clear_S<<<node_blks, NUM_THREADS>>>(d_S, num_nodes);
@@ -341,7 +374,11 @@ void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, in
         // In later iterations, is_empty_Bi will update is_empty. 
         while (!is_empty[0]) {
             
+            std :: cout << "i: " << i << std :: endl;
             computeLightReq<<<node_blks, NUM_THREADS>>>(d_B, d_light, d_row_ptrs, d_edge_weights, num_nodes, i, d_Req_size, d_dists, d_Req);
+
+            cudaDeviceSynchronize();
+            std::cout<<"early d Req size: " << d_Req_size[0] << std :: endl;
 
             update_S_clear_B_i<<<node_blks, NUM_THREADS>>>(
                 d_B, d_S, i, num_nodes
@@ -352,7 +389,11 @@ void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, in
                 thrust::sort(thrust::device, d_Req, d_Req + d_Req_size[0]);
             }
 
+            cudaDeviceSynchronize();
+            std :: cout << "dReq size: " << d_Req_size[0] << std :: endl;
+
             relax<<<edge_blks, NUM_THREADS>>>(d_B, d_Req, d_dists, d_Req_size[0], Delta);
+            cudaDeviceSynchronize();
             is_empty[0] = true;
             is_empty_B_i<<<node_blks, NUM_THREADS>>>(d_B, num_nodes, is_empty, i);
         }
@@ -363,6 +404,7 @@ void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, in
         computeHeavyReq<<<node_blks, NUM_THREADS>>>(d_S, d_heavy, d_row_ptrs, d_edge_weights, num_nodes, i, d_Req_size, d_dists, d_Req);
 
         relax<<<edge_blks, NUM_THREADS>>>(d_B, d_Req, d_dists, *d_Req_size, Delta);
+        cudaDeviceSynchronize();
 
         i++;
         is_empty[0] = true; 
@@ -374,5 +416,7 @@ void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, in
     cudaMemcpy(p, d_preds, graphCSR.numNodes * sizeof(int), cudaMemcpyDeviceToHost);
 
     std :: cout << "d[0]: " << d[0] << std :: endl;
+    std :: cout << "d[1]" << d[1] << std :: endl;
+    std :: cout << "d[2]" << d[2] << std :: endl;
 
 }
