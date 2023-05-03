@@ -161,7 +161,7 @@ typedef struct ReqElement {
 __global__ void relax(int* d_B, ReqElement* d_Req, int* d_dists, int d_Req_size, int delta) {
     int tid = threadIdx.x + blockDim.x * blockIdx.x;
 
-    if (tid > d_Req_size) {
+    if (tid >= d_Req_size) {
         return;
     }
 
