@@ -11,7 +11,7 @@
 #include "graph.h"
 
 // Single threaded Dijkstra. 
-void st_dijkstra(std::unordered_map<int, std::list<int>> adjList, int source, int num_nodes, int* d, int* p);
+void st_dijkstra(std::unordered_map<int, std::list<int>>& adjList, int source, int num_nodes, int* d, int* p);
 
 // Effects: populates dists with shortest distance to corresponding node
 // Currently does nothing with preds, maybe we can in the future 

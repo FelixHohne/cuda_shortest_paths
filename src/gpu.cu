@@ -164,14 +164,11 @@ void initializeBellmanFord(CSR graphCSR, int source, int num_nodes, int* d, int*
 typedef struct ReqElement { 
     int nodeId; 
     int dist;
-} ReqElement;
-
-struct compareReqElements {
     __host__ __device__
-    bool operator()(ReqElement &a, ReqElement &b) {
-        return a.nodeId < b.nodeId || a.dist < b.dist;
+    bool operator < (const ReqElement &b) const {
+        return nodeId < b.nodeId || dist < b.dist;
     }
-};
+} ReqElement;
 
 
 __global__ void relax(int* d_B, ReqElement* d_Req, int* d_dists, int d_Req_size, int delta) {
@@ -303,6 +300,7 @@ __global__ void is_empty_B_i(int* d_B, int num_nodes, bool* is_empty, int i) {
 
 void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, int* p, int Delta) {
 
+    std::cout << "Begin CUDA Delta Stepping" << std::endl;
     int node_blks = (graphCSR.numNodes + NUM_THREADS - 1) / NUM_THREADS;
     int edge_blks = (graphCSR.numEdges + NUM_THREADS - 1) / NUM_THREADS;
 
@@ -323,6 +321,8 @@ void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, in
     int* d_S;
     cudaMalloc((void**) &d_S, graphCSR.numNodes * sizeof(int));
 
+    // Invariant: non-dense pack. 
+    // Invariant: -1 means element is empty. 
     int* d_B; 
     cudaMalloc((void**) &d_B, graphCSR.numNodes * sizeof(int));
 
@@ -348,14 +348,6 @@ void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, in
 
     int i = 0; 
 
-    // used to test isEmpty(B[i]) 
-    int* bi_size = new int[1];
-    bi_size[0] = 1;
-    int* d_bi_size; 
-
-    cudaMalloc((void**) &d_bi_size, sizeof(int)); 
-    cudaMemset((void**) &d_bi_size, 0, sizeof(int));
-
     // Device Req array
     // Elements up to d_Req_size are correct, beyond is garbage
     ReqElement* d_Req; 
@@ -373,9 +365,11 @@ void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, in
     
     while (!is_empty[0]) {
         clear_S<<<node_blks, NUM_THREADS>>>(d_S, num_nodes);
-
     
-        while (bi_size[0] > 0) {
+        // Checks if B_i is not empty. 
+        // First iteration, B_i never empty. 
+        // In later iterations, is_empty_Bi will update is_empty. 
+        while (!is_empty[0]) {
             
             computeLightReq<<<node_blks, NUM_THREADS>>>(d_B, d_light, d_row_ptrs, d_edge_weights, num_nodes, i, d_Req_size, d_dists, d_Req);
 
@@ -383,7 +377,7 @@ void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, in
                 d_B, d_S, i, num_nodes
             );
             
-            thrust::sort(thrust::device, d_Req, d_Req+ d_Req_size, compareReqElements());
+            thrust::sort(thrust::device, d_Req, d_Req + d_Req_size[0]);
 
             relax<<<edge_blks, NUM_THREADS>>>(d_B, d_Req, d_dists, *d_Req_size, Delta);
             is_empty[0] = true;
