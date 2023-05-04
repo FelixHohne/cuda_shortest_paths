@@ -420,23 +420,24 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
         // In later iterations, is_empty_Bi will update is_empty. 
         while (!is_empty[0]) {
             std::cout << "i: " << i << std :: endl;
-            cudaDeviceSynchronize();
+            // cudaDeviceSynchronize();
 
-            cudaDeviceSynchronize();
-            if (d_Req_size[0] > 0) {
-                thrust::sort(thrust::device, d_Req, d_Req + d_Req_size[0]);
-            }
-            cudaDeviceSynchronize();
-            std :: cout << "Stage 1" << std :: endl; 
-            cudaDeviceSynchronize();
+            // cudaDeviceSynchronize();
+            // // if (d_Req_size[0] > 0) {
+            // //     thrust::sort(thrust::device, d_Req, d_Req + d_Req_size[0]);
+            // // }
+            // cudaDeviceSynchronize();
+            // std :: cout << "Stage 1" << std :: endl; 
+            // cudaDeviceSynchronize();
 
             
             computeLightReq<<<node_blks, NUM_THREADS>>>(d_B, d_light, d_row_ptrs, d_edge_weights, num_nodes, i, d_Req_size, d_dists, d_Req);
 
-             cudaDeviceSynchronize();
-            if (d_Req_size[0] > 0) {
-                thrust::sort(thrust::device, d_Req, d_Req + d_Req_size[0]);
-            }
+            // Required
+            cudaDeviceSynchronize();
+            // if (d_Req_size[0] > 0) {
+            //     thrust::sort(thrust::device, d_Req, d_Req + d_Req_size[0]);
+            // }
             cudaDeviceSynchronize();
             std :: cout << "Stage 2" << std :: endl; 
             cudaDeviceSynchronize();
@@ -449,24 +450,22 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
                 d_B, d_S, i, num_nodes
             );
 
-
              cudaDeviceSynchronize();
             if (d_Req_size[0] > 0) {
                 thrust::sort(thrust::device, d_Req, d_Req + d_Req_size[0]);
             }
             cudaDeviceSynchronize();
-            std :: cout << "Stage 3" << std :: endl; 
-            cudaDeviceSynchronize();
+            // std :: cout << "Stage 3" << std :: endl; 
+            // cudaDeviceSynchronize();
 
 
+            // cudaDeviceSynchronize();
 
-            cudaDeviceSynchronize();
+            // // std :: cout << "d_Req_size[0]:" << d_Req_size[0] << "num edges: " << graphCSR.numEdges << std :: endl;
 
-            // std :: cout << "d_Req_size[0]:" << d_Req_size[0] << "num edges: " << graphCSR.numEdges << std :: endl;
-
-            // print_d_Req<<<edge_blks, NUM_THREADS>>>(d_Req_size[0], d_Req, graphCSR.numEdges);
-            cudaDeviceSynchronize();
-            std::cout<< "Done printing" << std:: endl;
+            // // print_d_Req<<<edge_blks, NUM_THREADS>>>(d_Req_size[0], d_Req, graphCSR.numEdges);
+            // cudaDeviceSynchronize();
+            // std::cout<< "Done printing" << std:: endl;
 
 
             if (d_Req_size[0] > 0) {
@@ -474,25 +473,25 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
             }
             relax<<<edge_blks, NUM_THREADS>>>(d_B, d_Req, d_dists, d_Req_size[0], graphCSR.numEdges, Delta);
             
-            cudaDeviceSynchronize();
-            if (d_Req_size[0] > 0) {
-                thrust::sort(thrust::device, d_Req, d_Req + d_Req_size[0]);
-            }
-            cudaDeviceSynchronize();
-            std :: cout << "Stage 4" << std :: endl; 
-            cudaDeviceSynchronize();
+            // cudaDeviceSynchronize();
+            // // if (d_Req_size[0] > 0) {
+            // //     thrust::sort(thrust::device, d_Req, d_Req + d_Req_size[0]);
+            // // }
+            // cudaDeviceSynchronize();
+            // std :: cout << "Stage 4" << std :: endl; 
+            // cudaDeviceSynchronize();
 
-            cudaDeviceSynchronize();
+            // cudaDeviceSynchronize();
             is_empty[0] = true;
             is_empty_B_i<<<node_blks, NUM_THREADS>>>(d_B, num_nodes, is_empty, i);
 
-            cudaDeviceSynchronize();
-            if (d_Req_size[0] > 0) {
-                thrust::sort(thrust::device, d_Req, d_Req + d_Req_size[0]);
-            }
-            cudaDeviceSynchronize();
-            std :: cout << "Stage 5" << std :: endl; 
-            cudaDeviceSynchronize();
+            // cudaDeviceSynchronize();
+            // // if (d_Req_size[0] > 0) {
+            // //     thrust::sort(thrust::device, d_Req, d_Req + d_Req_size[0]);
+            // // }
+            // cudaDeviceSynchronize();
+            // std :: cout << "Stage 5" << std :: endl; 
+            // cudaDeviceSynchronize();
 
             
             // Note this line is required for correctness, as otherwise the updates to is_empty 
@@ -506,9 +505,9 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
         d_Req_size[0] = 0; 
 
         cudaDeviceSynchronize();
-        if (d_Req_size[0] > 0) {
-            thrust::sort(thrust::device, d_Req, d_Req + d_Req_size[0]);
-        }
+        // if (d_Req_size[0] > 0) {
+        //     thrust::sort(thrust::device, d_Req, d_Req + d_Req_size[0]);
+        // }
         cudaDeviceSynchronize();
         std :: cout << "Stage 6" << std :: endl; 
         cudaDeviceSynchronize();
@@ -522,9 +521,9 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
         is_empty_B<<<node_blks, NUM_THREADS>>>(d_B, num_nodes, is_empty); 
 
         cudaDeviceSynchronize();
-        if (d_Req_size[0] > 0) {
-            thrust::sort(thrust::device, d_Req, d_Req + d_Req_size[0]);
-        }
+        // if (d_Req_size[0] > 0) {
+        //     thrust::sort(thrust::device, d_Req, d_Req + d_Req_size[0]);
+        // }
         cudaDeviceSynchronize();
         std :: cout << "Stage 7" << std :: endl; 
         cudaDeviceSynchronize();
