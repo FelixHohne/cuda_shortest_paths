@@ -65,7 +65,7 @@ __global__ void computeNodeOfEdge(int num_edges, int num_nodes, int* d_row_ptrs,
     for (int k = node_edge_start; k < node_edge_end; k++) {
         int neighbor = d_neighbor_nodes[k]; 
         d_node_of_edge[k] = tid; 
-        printf("tid: %d, neighbor: %d, d_node_of_edge[k]: %d\n", tid, neighbor, d_node_of_edge[k]);
+        // printf("tid: %d, neighbor: %d, d_node_of_edge[k]: %d\n", tid, neighbor, d_node_of_edge[k]);
     }
 }
 
@@ -86,12 +86,12 @@ __global__ void EdgeWiseBellmanFord(int num_nodes, int num_edges, int* d_dists, 
     int v = d_neighbor_nodes[tid]; 
     int u = d_node_of_edge[tid]; 
 
-    printf("tid: %d, u: %d, v: %d, dists[v]: %d, proposed relaxation: %d\n", tid, u, v, d_dists[v], d_dists[u] + d_edge_weights[u]);
+    // printf("tid: %d, u: %d, v: %d, dists[v]: %d, proposed relaxation: %d\n", tid, u, v, d_dists[v], d_dists[u] + d_edge_weights[u]);
 
     // TODO: Check if d_edge_weights[u] or d_edge_weights[v]. 
     if (d_dists[u] != INT_MAX && d_dists[u] + d_edge_weights[u] < d_dists[v]) {
         atomicExch(d_dists + v,  d_dists[u] + d_edge_weights[u]);
-        atomicExch(d_preds + v, u);
+        // atomicExch(d_preds + v, u);
     }
 }
 
@@ -135,11 +135,6 @@ void initializeBellmanFord(CSR graphCSR, int source, int max_node, int* d, int* 
     gettimeofday(&start, 0);
     bellman_initialize_dists_array<<<blks, NUM_THREADS>>>(d_dists, num_nodes, source);
 
-    cudaDeviceSynchronize();
-    gettimeofday(&stop, 0);
-    double init_time = get_time(start, stop);
-    printf("Bellman init time:  %3.1f ms \n", init_time);
-
     cudaMemcpy(d_row_ptrs, graphCSR.rowPointers, (graphCSR.numNodes + 1) * sizeof(int), cudaMemcpyHostToDevice);
     cudaMemcpy(d_neighbor_nodes, graphCSR.neighborNodes, graphCSR.numEdges * sizeof(int), cudaMemcpyHostToDevice);
     cudaMemcpy(d_edge_weights, graphCSR.edgeWeights, graphCSR.numEdges * sizeof(int), cudaMemcpyHostToDevice);
@@ -149,18 +144,21 @@ void initializeBellmanFord(CSR graphCSR, int source, int max_node, int* d, int* 
     }
 
     cudaDeviceSynchronize();
+    gettimeofday(&stop, 0);
+    double init_time = get_time(start, stop);
+    printf("Bellman init time:  %3.1f ms \n", init_time);
 
-    std :: cout << "Node of Edge" << std :: endl;
-    for (int i = 0; i < graphCSR.numEdges; i++) { 
-        std :: cout << "i: " << d_node_of_edge[i] << std :: endl;
-    }
-
-    cudaDeviceSynchronize();
+    // std :: cout << "Node of Edge" << std :: endl;
+    // for (int i = 0; i < graphCSR.numEdges; i++) { 
+    //     std :: cout << "i: " << d_node_of_edge[i] << std :: endl;
+    // }
 
     float total_BF_time = 0;
     for (int i = 0; i < graphCSR.numNodes - 1; i++) {
         gettimeofday(&start, 0);
-        std :: cout << "Iteration i: " << i << std :: endl;
+        if (i % 10000 == 0) {
+            std :: cout << "Iteration i: " << i << std :: endl;
+        }
 
         if (EDGE_WISE_BELLMAN_FORD) {
             EdgeWiseBellmanFord<<<edge_blks, NUM_THREADS>>>(num_nodes, graphCSR.numEdges, d_dists, d_preds, d_node_of_edge, d_neighbor_nodes, d_edge_weights);
