@@ -6,6 +6,6 @@
 
 void initializeBellmanFord(CSR graphCSR, int source, int num_nodes, int* d, int* p);
 
-void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, int* p, int Delta);
+void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int* p, int Delta);
 
 #endif
