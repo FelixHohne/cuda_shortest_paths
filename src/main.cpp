@@ -89,6 +89,7 @@ int main(int argc, char* argv[]) {
     std::string output_file = find_string_arg(argc, argv, "-o", "");
 
     std::cout<< "Parsing edge list" << std::endl;
+    std :: cout << "Input file is: " << input_file << std :: endl;
     // construct adjacency list
     auto [parsed_edge_list, max_node] = read_edge_list(input_file);
     if (DEBUG_PRINT) {
@@ -123,19 +124,21 @@ int main(int argc, char* argv[]) {
     auto start_algo = std::chrono::steady_clock::now();
     int* min_distances = new int[max_node]; 
     int* p = new int[max_node]; 
-    int Delta = 100; 
-    std :: cout << "Delta" << Delta << std :: endl;
 
-    std::cout << "Running algorithm " << algo << std::endl;
+
+    int delta = find_int_arg(argc, argv, "-D", 50);
+
+    std::cout << "Running algorithm: " << algo << std::endl;
+    std :: cout << "Delta: " << delta << std :: endl;
     if (algo == "serial-dijkstra") {
         st_dijkstra(adjList, source_node, max_node, min_distances, p);
     } else if (algo == "serial-delta-stepping") {
-        delta_stepping(graphCSR, source_node, max_node, min_distances, p, Delta);
+        delta_stepping(graphCSR, source_node, max_node, min_distances, p, delta);
     } else if (algo == "gpu-bellman-ford") {
         initializeBellmanFord(graphCSR, source_node, max_node, min_distances, p);
     } 
     else if (algo == "gpu-delta-stepping") {
-        initializeDeltaStepping(graphCSR, source_node, max_node, min_distances, p, Delta); 
+        initializeDeltaStepping(graphCSR, source_node, max_node, min_distances, p, delta); 
     }
     else {
         std::cout<<"Invalid algorithm provided. " << std::endl;
