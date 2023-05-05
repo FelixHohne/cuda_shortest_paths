@@ -8,8 +8,12 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <cuda_runtime_api.h>
+#include <cuda.h>
+
 // commented out since G2 doesn't like it
 // #include <cuda.h>
+
 
 // Returns: index of option in argv, -1 if not found
 int find_arg_idx(int argc, char* argv[], const char* option) {
@@ -115,7 +119,7 @@ int main(int argc, char* argv[]) {
     
 
     CSR graphCSR;
-    if (algo == "gpu-bellman-ford" || algo == "gpu-delta-stepping") {
+    if (ASYNC_MEMORY && algo == "gpu-bellman-ford" || algo == "gpu-delta-stepping") {
         graphCSR = construct_sparse_CSR(adjList, max_node, true);
     }
     else {
@@ -128,9 +132,19 @@ int main(int argc, char* argv[]) {
 
     // start algorithm
     auto start_algo = std::chrono::steady_clock::now();
+    
     int* min_distances = new int[max_node]; 
     int* p = new int[max_node]; 
 
+    // Doesn't seem to be worth it. 
+    if (false) {
+        cudaMallocHost((void**) &min_distances, (max_node) * sizeof(int)); 
+        cudaMallocHost((void**) &p, (max_node) * sizeof(int)); 
+    }
+    else {
+        min_distances = new int[max_node]; 
+        p = new int[max_node]; 
+    }
 
     int delta = find_int_arg(argc, argv, "-D", 50);
 

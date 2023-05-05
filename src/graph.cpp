@@ -11,7 +11,6 @@
 #include <cuda_runtime_api.h>
 #include <cuda.h>
 
-
 void print_adj_list(std::unordered_map<int, std::list<int>>  adjList) {
     for (const auto &token: adjList) {
         std::cout << "Adjacency list of " << token.first << std:: endl;
