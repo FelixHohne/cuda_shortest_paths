@@ -1,9 +1,13 @@
 cmake_minimum_required(VERSION 3.16)
+enable_language(CUDA)
 
 project(graph_cuda)
 set(CMAKE_CXX_STANDARD 20)
-add_executable(graph_cuda src/main.cpp src/loading.cpp src/loading.h src/graph.cpp src/graph.h src/serial.cpp src/serial.h src/gpu.cuh src/gpu.cpp)
+add_executable(graph_cuda src/loading.cpp src/loading.h src/graph.cpp src/graph.h src/serial.cpp src/serial.h src/gpu.cuh src/gpu.cu src/main.cpp)
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_60")
 
 # Copy the job scripts
 configure_file(job-cpu job-cpu COPYONLY)
+configure_file(job-gpu job-gpu COPYONLY)
