@@ -15,9 +15,9 @@
 #include <thrust/execution_policy.h>
 
 
-#define NUM_THREADS 912
+#define NUM_THREADS 1024
 bool ELEMENT_WISE_TIMING = false; 
-#define ENABLE_SHARED_MEMORY true; 
+bool EDGE_WISE_BELLMAN_FORD = false; 
 
 double get_time(timeval& t1, timeval& t2){
     return (1000000.0*(t2.tv_sec-t1.tv_sec) + t2.tv_usec-t1.tv_usec)/1000.0;
@@ -26,34 +26,72 @@ double get_time(timeval& t1, timeval& t2){
 __global__ void BellmanFord(int num_nodes, int num_edges, int* d_dists, int* d_preds, int* d_row_ptrs, int* d_neighbor_nodes, int* d_edge_weights) {
 
     int tid = threadIdx.x + blockDim.x * blockIdx.x;
-
-
-    if (tid > num_nodes - 1) {
+    
+    if (tid >= num_nodes) {
         return;
     }
 
-    if (true) {
-        __shared__ int tmp_d_row_ptrs[NUM_THREADS];
-        tmp_d_row_ptrs[threadIdx.x] = d_row_ptrs[tid]; 
-        __syncthreads();
-
-        for (int i = d_row_ptrs[tid]; i < d_row_ptrs[tid]; i++) {
-            int v = d_neighbor_nodes[i];
-            if (d_dists[tid] != INT_MAX && d_dists[tid] + d_edge_weights[i] < d_dists[v]) {
-                atomicExch(d_dists + v,  d_dists[tid] + d_edge_weights[i]);
-            }
+    for (int i = d_row_ptrs[tid]; i < d_row_ptrs[tid + 1]; i++) {
+        int v = d_neighbor_nodes[i];
+        // if distance[tid] + w < distance[v]
+        if (d_dists[tid] != INT_MAX && d_dists[tid] + d_edge_weights[i] < d_dists[v]) {
+            
+            atomicExch(d_dists + v,  d_dists[tid] + d_edge_weights[i]);
+            atomicExch(d_preds + v, tid);
         }
+        
+    }
+}
+
+/*
+Node wise parallel function. 
+Computes d_node_of_edge mapping, such that if int v = d_neighbor_nodes[tid], 
+then d_node_of_edge[v] = u where (u, v) \in E. 
+*/
+
+__global__ void computeNodeOfEdge(int num_edges, int num_nodes, int* d_row_ptrs, int* d_neighbor_nodes, int* d_node_of_edge) 
+{
+    int tid = threadIdx.x + blockDim.x * blockIdx.x;
+    if (tid >= num_nodes) {
+        return;
     }
 
-    else {
-        for (int i = d_row_ptrs[tid]; i < d_row_ptrs[tid + 1]; i++) {
-            int v = d_neighbor_nodes[i];
-            if (d_dists[tid] != INT_MAX && d_dists[tid] + d_edge_weights[i] < d_dists[v]) {
-                atomicExch(d_dists + v,  d_dists[tid] + d_edge_weights[i]);
-            }
-            
-        }
-    } 
+    /*
+    node u has edges in d_neighbor_nodes in indices [node_edge_start)
+    */
+    int node_edge_start = d_row_ptrs[tid]; 
+    int node_edge_end = d_row_ptrs[tid + 1]; 
+    
+    printf("tid: %d, node_edge_start: %d, node_edge_end: %d\n", tid, node_edge_start, node_edge_end);
+    for (int k = node_edge_start; k < node_edge_end; k++) {
+        int neighbor = d_neighbor_nodes[k]; 
+        d_neighbor_nodes[neighbor] = tid; 
+        printf("Assigned neighbor: %d to tid: %d\n", neighbor, tid);
+    }
+}
+
+__global__ void EdgeWiseBellmanFord(int num_nodes, int num_edges, int* d_dists, int* d_preds, int* d_node_of_edge, int* d_neighbor_nodes, int* d_edge_weights) {
+
+    /*
+    Invariants: We consider relaxation of edge (u, v). 
+    v = d_neighbor_nodes[tid]. 
+    u = node_of_edge[v]. 
+    As u & v are nodes, 0 <= u <= max_node and 0 <= v <= max_node. 
+    */
+    int tid = threadIdx.x + blockDim.x * blockIdx.x;
+    
+    if (tid >= num_edges) {
+        return;
+    }
+    
+    int v = d_neighbor_nodes[tid]; 
+    int u = d_node_of_edge[v]; 
+
+    // TODO: Check if d_edge_weights[u] or d_edge_weights[v]. 
+    if (d_dists[u] != INT_MAX && d_dists[u] + d_edge_weights[u] < d_dists[v]) {
+        atomicExch(d_dists + v,  d_dists[u] + d_edge_weights[u]);
+        atomicExch(d_preds + v, u);
+    }
 }
 
 __global__ void bellman_initialize_dists_array(int* d_dists, int num_nodes, int source) {
@@ -64,7 +102,6 @@ __global__ void bellman_initialize_dists_array(int* d_dists, int num_nodes, int 
     
     d_dists[tid] = INT_MAX; 
     
-
     if (tid == 0) {
         d_dists[source] = 0;
     }
@@ -73,9 +110,10 @@ __global__ void bellman_initialize_dists_array(int* d_dists, int num_nodes, int 
 /**
  * Requires: no negative-weight cycles
  */
-void initializeBellmanFord(CSR graphCSR, int source, int num_nodes, int* d, int* p) {
+void initializeBellmanFord(CSR graphCSR, int source, int max_node, int* d, int* p) {
 
     struct timeval start, stop;
+    int num_nodes = max_node + 1; 
 
     int* d_dists;
     int* d_preds;
@@ -83,34 +121,48 @@ void initializeBellmanFord(CSR graphCSR, int source, int num_nodes, int* d, int*
     int* d_neighbor_nodes;
     int* d_edge_weights;
     int blks = (graphCSR.numNodes + NUM_THREADS - 1) / NUM_THREADS;
+    int edge_blks = (graphCSR.numEdges + NUM_THREADS - 1) / NUM_THREADS;
+    int* d_node_of_edge; 
 
     cudaMalloc((void**) &d_dists, graphCSR.numNodes * sizeof(int));
     cudaMalloc((void**) &d_preds, graphCSR.numNodes * sizeof(int));
-    cudaMalloc((void**) &d_row_ptrs, graphCSR.numNodes * sizeof(int));
+    cudaMalloc((void**) &d_row_ptrs, (graphCSR.numNodes + 1) * sizeof(int));
     cudaMalloc((void**) &d_neighbor_nodes, graphCSR.numEdges * sizeof(int));
     cudaMalloc((void**) &d_edge_weights, graphCSR.numEdges * sizeof(int));
+    cudaMallocManaged((void**) &d_node_of_edge, graphCSR.numEdges * sizeof(int));
 
     gettimeofday(&start, 0);
+    bellman_initialize_dists_array<<<blks, NUM_THREADS>>>(d_dists, num_nodes, source);
+     
+    cudaDeviceSynchronize();
+    std :: cout << "Assigned dnode of edge" << std :: endl;
+    for (int i = 0; i < num_nodes; i++) {
+        std :: cout << "i: " << d_node_of_edge[i] << std :: endl; 
+    }
 
-    bellman_initialize_dists_array<<<blks, NUM_THREADS>>>(d_dists, graphCSR.numNodes, source);
-    
     cudaDeviceSynchronize();
     gettimeofday(&stop, 0);
     double init_time = get_time(start, stop);
     printf("Bellman init time:  %3.1f ms \n", init_time);
 
-
-    cudaMemcpy(d_row_ptrs, graphCSR.rowPointers, graphCSR.numNodes * sizeof(int), cudaMemcpyHostToDevice);
-
+    cudaMemcpy(d_row_ptrs, graphCSR.rowPointers, (graphCSR.numNodes + 1) * sizeof(int), cudaMemcpyHostToDevice);
     cudaMemcpy(d_neighbor_nodes, graphCSR.neighborNodes, graphCSR.numEdges * sizeof(int), cudaMemcpyHostToDevice);
-
     cudaMemcpy(d_edge_weights, graphCSR.edgeWeights, graphCSR.numEdges * sizeof(int), cudaMemcpyHostToDevice);
+
+    if (EDGE_WISE_BELLMAN_FORD) {
+        computeNodeOfEdge<<<blks, NUM_THREADS>>>(graphCSR.numEdges, graphCSR.numNodes, d_row_ptrs, d_neighbor_nodes, d_node_of_edge); 
+    }
 
     float total_BF_time = 0;
     for (int i = 0; i < graphCSR.numNodes - 1; i++) {
         gettimeofday(&start, 0);
 
-        BellmanFord<<<blks, NUM_THREADS>>>( graphCSR.numNodes, graphCSR.numEdges, d_dists, d_preds, d_row_ptrs, d_neighbor_nodes, d_edge_weights);
+        if (EDGE_WISE_BELLMAN_FORD) {
+            EdgeWiseBellmanFord<<<edge_blks, NUM_THREADS>>>(num_nodes, graphCSR.numEdges, d_dists, d_preds, d_node_of_edge, d_neighbor_nodes, d_edge_weights);
+        }
+        else {
+            BellmanFord<<<blks, NUM_THREADS>>>(num_nodes, graphCSR.numEdges, d_dists, d_preds, d_row_ptrs, d_neighbor_nodes, d_edge_weights);
+        }
 
         if (ELEMENT_WISE_TIMING) {
             cudaDeviceSynchronize();
@@ -421,7 +473,6 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
 
     while (!is_empty[0]) {
         clear_S<<<node_blks, NUM_THREADS>>>(d_S, num_nodes);
-        d_Req_size[0] = 0; 
         /* Checks if B_i is not empty. 
         First iteration, B_i never empty. 
         In later iterations, is_empty_Bi will update is_empty. 
@@ -429,6 +480,8 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
         while (!is_empty[0]) {
             std::cout << "i: " << i << std :: endl;
             
+            d_Req_size[0] = 0; 
+            cudaDeviceSynchronize(); 
             computeLightReq<<<node_blks, NUM_THREADS>>>(d_B, d_light, d_row_ptrs, d_edge_weights, num_nodes, i, d_Req_size, d_dists, d_Req);
 
             // This cudaDeviceSynchronize is required; causes correctness issues to remove it. 
@@ -460,7 +513,6 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
         d_Req_size[0] = 0; 
 
         cudaDeviceSynchronize();
-
         computeHeavyReq<<<node_blks, NUM_THREADS>>>(d_S, d_heavy, d_row_ptrs, d_edge_weights, num_nodes, i, d_Req_size, d_dists, d_Req);
 
         relax<<<edge_blks, NUM_THREADS>>>(d_B, d_Req, d_dists, *d_Req_size, graphCSR.numEdges, Delta);
