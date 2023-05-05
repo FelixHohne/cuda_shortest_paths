@@ -18,6 +18,9 @@
 #define NUM_THREADS 1024
 bool ELEMENT_WISE_TIMING = false; 
 bool EDGE_WISE_BELLMAN_FORD = true; 
+#define EDGE_WISE_SHARED_MEMORY false // Requires EDGE_WISE_BELLMAN_FORD = true
+
+
 
 double get_time(timeval& t1, timeval& t2){
     return (1000000.0*(t2.tv_sec-t1.tv_sec) + t2.tv_usec-t1.tv_usec)/1000.0;
@@ -63,12 +66,13 @@ __global__ void computeNodeOfEdge(int num_edges, int num_nodes, int* d_row_ptrs,
     int node_edge_end = d_row_ptrs[tid + 1]; 
     
     for (int k = node_edge_start; k < node_edge_end; k++) {
-        int neighbor = d_neighbor_nodes[k]; 
         d_node_of_edge[k] = tid; 
-        // printf("tid: %d, neighbor: %d, d_node_of_edge[k]: %d\n", tid, neighbor, d_node_of_edge[k]);
     }
 }
 
+/*
+Edge Wise Parallelized. 
+*/
 __global__ void EdgeWiseBellmanFord(int num_nodes, int num_edges, int* d_dists, int* d_preds, int* d_node_of_edge, int* d_neighbor_nodes, int* d_edge_weights) {
 
     /*
@@ -82,17 +86,37 @@ __global__ void EdgeWiseBellmanFord(int num_nodes, int num_edges, int* d_dists, 
     if (tid >= num_edges) {
         return;
     }
-    
-    int v = d_neighbor_nodes[tid]; 
-    int u = d_node_of_edge[tid]; 
 
-    // printf("tid: %d, u: %d, v: %d, dists[v]: %d, proposed relaxation: %d\n", tid, u, v, d_dists[v], d_dists[u] + d_edge_weights[u]);
+    if (EDGE_WISE_SHARED_MEMORY) {
+
+    __shared__ int tmp_neighbor_nodes[NUM_THREADS]; 
+    __shared__ int tmp_node_of_edge[NUM_THREADS]; 
+
+    tmp_neighbor_nodes[threadIdx.x] = d_neighbor_nodes[tid]; 
+    tmp_node_of_edge[threadIdx.x] = d_node_of_edge[tid]; 
+    __syncthreads();
+
+    int v = tmp_neighbor_nodes[threadIdx.x];
+    int u = tmp_node_of_edge[threadIdx.x];
 
     // TODO: Check if d_edge_weights[u] or d_edge_weights[v]. 
     if (d_dists[u] != INT_MAX && d_dists[u] + d_edge_weights[u] < d_dists[v]) {
         atomicExch(d_dists + v,  d_dists[u] + d_edge_weights[u]);
         // atomicExch(d_preds + v, u);
     }
+
+    } 
+    else {
+        int v = d_neighbor_nodes[tid]; 
+        int u = d_node_of_edge[tid]; 
+
+        // TODO: Check if d_edge_weights[u] or d_edge_weights[v]. 
+        if (d_dists[u] != INT_MAX && d_dists[u] + d_edge_weights[u] < d_dists[v]) {
+            atomicExch(d_dists + v,  d_dists[u] + d_edge_weights[u]);
+            // atomicExch(d_preds + v, u);
+        }
+    }
+    
 }
 
 __global__ void bellman_initialize_dists_array(int* d_dists, int num_nodes, int source) {
@@ -130,7 +154,7 @@ void initializeBellmanFord(CSR graphCSR, int source, int max_node, int* d, int* 
     cudaMalloc((void**) &d_row_ptrs, (graphCSR.numNodes + 1) * sizeof(int));
     cudaMalloc((void**) &d_neighbor_nodes, graphCSR.numEdges * sizeof(int));
     cudaMalloc((void**) &d_edge_weights, graphCSR.numEdges * sizeof(int));
-    cudaMallocManaged((void**) &d_node_of_edge, graphCSR.numEdges * sizeof(int));
+    cudaMalloc((void**) &d_node_of_edge, graphCSR.numEdges * sizeof(int));
 
     gettimeofday(&start, 0);
     bellman_initialize_dists_array<<<blks, NUM_THREADS>>>(d_dists, num_nodes, source);
