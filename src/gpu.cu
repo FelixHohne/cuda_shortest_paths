@@ -469,6 +469,15 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
     cudaStreamCreate(&stream9);
     cudaStreamCreate(&stream10);
 
+    cudaEvent_t event1, event2, event3, event4, event8;
+
+    cudaEventCreate(&event1);
+    cudaEventCreate(&event2);
+    cudaEventCreate(&event3); 
+    cudaEventCreate(&event4);
+    cudaEventCreate(&event8);
+
+
     cudaMallocAsync((void**) &d_row_ptrs, (graphCSR.numNodes + 1) * sizeof(int), stream1);
 
     cudaMallocAsync((void**) &d_neighbor_nodes, (graphCSR.numEdges) * sizeof(int), stream2);
@@ -476,6 +485,8 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
     cudaMallocAsync((void**) &d_edge_weights, (graphCSR.numEdges) * sizeof(int), stream3);
 
     cudaMallocAsync((void**) &d_S, graphCSR.numNodes * sizeof(int), stream4);
+
+    cudaEventRecord(event4, stream4); 
 
     cudaMallocAsync((void**) &d_dists, graphCSR.numNodes * sizeof(int), stream5);
 
@@ -485,19 +496,44 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
 
     cudaMallocAsync((void**) &d_B, graphCSR.numNodes * sizeof(int), stream8);
 
+    cudaEventRecord(event8, stream8); 
+
     cudaMallocAsync((void**) &d_light, graphCSR.numEdges * sizeof(int), stream9);
     
     cudaMallocAsync((void**) &d_heavy, graphCSR.numEdges * sizeof(int), stream10);
 
     cudaMemcpyAsync(d_row_ptrs, graphCSR.rowPointers, (graphCSR.numNodes + 1) * sizeof(int), cudaMemcpyHostToDevice, stream1);
 
+    cudaEventRecord(event1, stream1); 
+
     cudaMemcpyAsync(d_neighbor_nodes, graphCSR.neighborNodes, graphCSR.numEdges * sizeof(int), cudaMemcpyHostToDevice, stream2);
+
+    cudaEventRecord(event2, stream2); 
 
     cudaMemcpyAsync(d_edge_weights, graphCSR.edgeWeights, graphCSR.numEdges * sizeof(int), cudaMemcpyHostToDevice, stream3);    
 
-    cudaDeviceSynchronize();
+    cudaEventRecord(event3, stream3); 
 
-    initialize_light_heavy_arrays<<<edge_blks, NUM_THREADS>>>(d_light, d_heavy, d_neighbor_nodes, d_edge_weights, graphCSR.numEdges, Delta);
+    cudaEventSynchronize(event1); 
+    cudaEventSynchronize(event2); 
+    cudaEventSynchronize(event3); 
+
+    // Does not use dynamic memory
+    initialize_light_heavy_arrays<<<edge_blks, NUM_THREADS, 0, stream3>>>(d_light, d_heavy, d_neighbor_nodes, d_edge_weights, graphCSR.numEdges, Delta);
+
+    cudaEventSynchronize(event4); 
+    cudaEventSynchronize(event8); 
+
+    /*
+    Initializes d_dists to INT_MAX 
+    Clears B[i]
+    Sets source distance to 0 
+    Adds source to B[0]. 
+    Does not use dynamic memory.
+    */
+    delta_stepping_initialize<<<node_blks, NUM_THREADS, 0, stream8>>>(d_dists, d_B, graphCSR.numNodes, source);
+
+    cudaDeviceSynchronize(); 
 
     int i = 0; 
 
@@ -508,14 +544,6 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
     bool* is_empty; 
     cudaMallocManaged(&is_empty, sizeof(bool)); 
     is_empty[0] = false; 
-
-    /*
-    Initializes d_dists to INT_MAX 
-    Clears B[i]
-    Sets source distance to 0 
-    Adds source to B[0]. 
-    */
-    delta_stepping_initialize<<<node_blks, NUM_THREADS>>>(d_dists, d_B, graphCSR.numNodes, source);
 
 
     while (!is_empty[0]) {
@@ -570,7 +598,6 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
         // will not propagate to host code. 
         cudaDeviceSynchronize();
     }
-
 
     cudaMemcpy(d, d_dists, graphCSR.numNodes * sizeof(int), cudaMemcpyDeviceToHost);
     cudaMemcpy(p, d_preds, graphCSR.numNodes * sizeof(int), cudaMemcpyDeviceToHost);

@@ -114,7 +114,13 @@ int main(int argc, char* argv[]) {
     }
     
 
-    CSR graphCSR = construct_sparse_CSR(adjList, max_node);
+    CSR graphCSR;
+    if (algo == "gpu-bellman-ford" || algo == "gpu-delta-stepping") {
+        graphCSR = construct_sparse_CSR(adjList, max_node, true);
+    }
+    else {
+        graphCSR = construct_sparse_CSR(adjList, max_node, false);
+    }
     std::cout<<"Constructed sparse CSR representation" << std::endl;
     if (DEBUG_PRINT) {
         print_adj_list(adjList);

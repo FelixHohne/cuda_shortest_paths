@@ -8,6 +8,8 @@
 #include <iostream>
 #include <unordered_map>
 #include <vector>
+#include <cuda_runtime_api.h>
+#include <cuda.h>
 
 
 void print_adj_list(std::unordered_map<int, std::list<int>>  adjList) {
@@ -42,20 +44,35 @@ std::unordered_map<int, std::list<int>> construct_adj_list(std::list<std::pair<i
 }
 
 
-CSR construct_sparse_CSR(std::unordered_map<int, std::list<int>> adj_list, int max_node) {
+CSR construct_sparse_CSR(std::unordered_map<int, std::list<int>> adj_list, int max_node, bool is_cuda) {
     int num_nodes = max_node + 1; 
-    int* row_pointers = new int[num_nodes + 1];
+    int* row_pointers; 
+    int* neighbor_nodes; // ids of neighbor nodes in adj_list
+    int* edge_weights; 
+
+    if (is_cuda) {
+        cudaMallocHost((void**) &row_pointers, (num_nodes + 1) * sizeof(int)); 
+
+    }
+    else {
+        row_pointers = new int[num_nodes + 1];
+    }
+
     int num_edges = 0;
 
     for (auto const p: adj_list) {
         num_edges = num_edges + p.second.size();
     }
 
-
-    // ids of neighbor nodes in adj_list
-    int* neighbor_nodes = new int[num_edges];
-    int* edge_weights = new int[num_edges];
-
+    if (is_cuda) {
+        cudaMallocHost((void**) &neighbor_nodes, (num_edges) * sizeof(int)); 
+        cudaMallocHost((void**) &edge_weights, (num_edges) * sizeof(int)); 
+    }
+    else {
+        neighbor_nodes = new int[num_edges];
+        edge_weights = new int[num_edges];
+    }
+    
     // TODO: Handle edge weights
     std::fill_n(edge_weights, num_edges, 1);
     int num_edges_added = 0;
@@ -79,7 +96,6 @@ CSR construct_sparse_CSR(std::unordered_map<int, std::list<int>> adj_list, int m
         // note row_pointers[0] should always be 0
         row_pointers[i + 1] = num_edges_added;
     }
-
 
     CSR graph_CSR = {
         .numNodes = num_nodes,
