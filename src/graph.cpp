@@ -84,6 +84,15 @@ CSR construct_sparse_CSR(std::unordered_map<int, std::list<int>> adj_list, int m
         .neighborNodes = neighbor_nodes,
         .edgeWeights = edge_weights
     };
+
+    std :: cout << "Row Pointers" << std :: endl; 
+    for (int i = 0; i < num_nodes + 1; i++) {
+        std :: cout << "i: " << i << ", " << row_pointers[i] << std :: endl;
+    }
+    std :: cout << "Neighbor Nodes" << std :: endl; 
+    for (int i = 0; i < num_edges; i++) {
+        std :: cout << "i: " << i << ", " << neighbor_nodes[i] << std :: endl;
+    }
     return graph_CSR;
 }
 
