@@ -84,9 +84,9 @@ __global__ void EdgeWiseBellmanFord(int num_nodes, int num_edges, int* d_dists, 
     }
     
     int v = d_neighbor_nodes[tid]; 
-    int u = d_node_of_edge[v]; 
+    int u = d_node_of_edge[tid]; 
 
-    printf("u: %d, v: %d, dists[v]: %d, proposed relaxation: %d\n", u, v, d_dists[v], d_dists[u] + d_edge_weights[u]);
+    printf("tid: %d, u: %d, v: %d, dists[v]: %d, proposed relaxation: %d\n", tid, u, v, d_dists[v], d_dists[u] + d_edge_weights[u]);
 
     // TODO: Check if d_edge_weights[u] or d_edge_weights[v]. 
     if (d_dists[u] != INT_MAX && d_dists[u] + d_edge_weights[u] < d_dists[v]) {
