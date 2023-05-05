@@ -494,10 +494,6 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
 
     initialize_d_Req<<<edge_blks, NUM_THREADS>>>(d_Req, graphCSR.numEdges);
 
-    cudaDeviceSynchronize(); 
-    std :: cout << "We begin now" << std :: endl;
-    cudaDeviceSynchronize();
-
     while (!is_empty[0]) {
         clear_S<<<node_blks, NUM_THREADS>>>(d_S, num_nodes);
         /* Checks if B_i is not empty. 
@@ -505,7 +501,6 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
         In later iterations, is_empty_Bi will update is_empty. 
         */
         while (!is_empty[0]) {
-            std::cout << "i: " << i << std :: endl;
             
             d_Req_size[0] = 0; 
             cudaDeviceSynchronize(); 
@@ -534,7 +529,6 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
             cudaDeviceSynchronize();
         }
         
-        std :: cout << "Done with inner" << std :: endl; 
         cudaDeviceSynchronize(); 
         // Clear Req. 
         d_Req_size[0] = 0; 
@@ -556,11 +550,5 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
 
     cudaMemcpy(d, d_dists, graphCSR.numNodes * sizeof(int), cudaMemcpyDeviceToHost);
     cudaMemcpy(p, d_preds, graphCSR.numNodes * sizeof(int), cudaMemcpyDeviceToHost);
-
-    std :: cout << "d[0]: " << d[0] << std :: endl;
-    std :: cout << "d[1]" << d[1] << std :: endl;
-    std :: cout << "d[2]" << d[2] << std :: endl;
-    std :: cout << "d[3]" << d[3] << std :: endl;
-    std :: cout << "d[4]" << d[4] << std :: endl;
 
 }

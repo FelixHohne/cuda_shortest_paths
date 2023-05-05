@@ -25,14 +25,18 @@ std::unordered_map<int, std::list<int>> construct_adj_list(std::list<std::pair<i
     std::unordered_map<int, std::list<int>> adjList;
     for (const auto &token: edge_list) {
         auto [u, v] = token; 
-        if (std::find(adjList[u].begin(), adjList[u].end(), v) 
-            == adjList[u].end()) {
-            adjList[u].push_back(v);
-        }
+        
+        adjList[u].push_back(v);
+        adjList[token.second].push_back(token.first);
 
-        if (std::find(adjList[v].begin(), adjList[v].end(), u) == adjList[v].end()) {
-            adjList[token.second].push_back(token.first);
-        }
+        // if (std::find(adjList[u].begin(), adjList[u].end(), v) 
+        //     == adjList[u].end()) {
+        //     adjList[u].push_back(v);
+        // }
+
+        // if (std::find(adjList[v].begin(), adjList[v].end(), u) == adjList[v].end()) {
+        //     adjList[token.second].push_back(token.first);
+        // }
     }
     return adjList;
 }
