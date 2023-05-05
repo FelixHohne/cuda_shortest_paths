@@ -123,7 +123,7 @@ int main(int argc, char* argv[]) {
     auto start_algo = std::chrono::steady_clock::now();
     int* min_distances = new int[max_node]; 
     int* p = new int[max_node]; 
-    int Delta = 50; 
+    int Delta = 100; 
     std :: cout << "Delta" << Delta << std :: endl;
 
     std::cout << "Running algorithm " << algo << std::endl;
