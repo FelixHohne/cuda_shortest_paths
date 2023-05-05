@@ -17,6 +17,8 @@
 
 #define NUM_THREADS 912
 bool ELEMENT_WISE_TIMING = false; 
+#define ENABLE_SHARED_MEMORY true; 
+
 double get_time(timeval& t1, timeval& t2){
     return (1000000.0*(t2.tv_sec-t1.tv_sec) + t2.tv_usec-t1.tv_usec)/1000.0;
 }
@@ -25,44 +27,33 @@ __global__ void BellmanFord(int num_nodes, int num_edges, int* d_dists, int* d_p
 
     int tid = threadIdx.x + blockDim.x * blockIdx.x;
 
-    // __shared__ int tmp_d_row_ptrs[NUM_THREADS];
 
     if (tid > num_nodes - 1) {
         return;
     }
 
-    // tmp_d_row_ptrs[threadIdx.x] = d_row_ptrs[tid]; 
-    // __syncthreads();
+    if (true) {
+        __shared__ int tmp_d_row_ptrs[NUM_THREADS];
+        tmp_d_row_ptrs[threadIdx.x] = d_row_ptrs[tid]; 
+        __syncthreads();
 
-
-    // each thread is responsible for a node u
-    // for each edge (u, v) with weight w
-    // for (int i = tmp_d_row_ptrs[tid]; i < tmp_d_row_ptrs[tid + 1]; i++) {
-    for (int i = d_row_ptrs[tid]; i < d_row_ptrs[tid + 1]; i++) {
-
-        int v = d_neighbor_nodes[i];
-        // if distance[tid] + w < distance[v]
-        if (d_dists[tid] != INT_MAX && d_dists[tid] + d_edge_weights[i] < d_dists[v]) {
-            // update d_dist and d_preds
-            // distance[v] := distance[tid] + w
-            
-
-            // Note: Both of these operations need to be atomic; thus this is incorrect. 
-            // Solution: Using long long int to update both simultaneously. 
-            // https://stackoverflow.com/questions/64397044/how-do-i-apply-atomic-operation-for-struct-on-cuda
-            // https://stackoverflow.com/questions/17411493/how-can-i-implement-a-custom-atomic-function-involving-several-variables
-            // A third approach involves using undefined behavior via union types: 
-            // https://stackoverflow.com/questions/5792704/convert-int2-to-long
-            
-            // d_dists[v] = d_dists[tid] + d_edge_weights[i];
-            atomicExch(d_dists + v,  d_dists[tid] + d_edge_weights[i]);
-            // predecessor[v] := tid
-            
-            // d_preds[v] = tid;
-            // atomicExch(d_preds + v, tid);
+        for (int i = d_row_ptrs[tid]; i < d_row_ptrs[tid]; i++) {
+            int v = d_neighbor_nodes[i];
+            if (d_dists[tid] != INT_MAX && d_dists[tid] + d_edge_weights[i] < d_dists[v]) {
+                atomicExch(d_dists + v,  d_dists[tid] + d_edge_weights[i]);
+            }
         }
-        
     }
+
+    else {
+        for (int i = d_row_ptrs[tid]; i < d_row_ptrs[tid + 1]; i++) {
+            int v = d_neighbor_nodes[i];
+            if (d_dists[tid] != INT_MAX && d_dists[tid] + d_edge_weights[i] < d_dists[v]) {
+                atomicExch(d_dists + v,  d_dists[tid] + d_edge_weights[i]);
+            }
+            
+        }
+    } 
 }
 
 __global__ void bellman_initialize_dists_array(int* d_dists, int num_nodes, int source) {
@@ -247,11 +238,11 @@ __global__ void computeLightReq(int* d_B, int* d_light, int* d_row_ptrs, int* d_
     }
 
     int v = tid;
-    for (int i = d_row_ptrs[v]; i < d_row_ptrs[v + 1]; i++) {
-        if (d_light[i] != -1) {
+    for (int j = d_row_ptrs[v]; j < d_row_ptrs[v + 1]; j++) {
+        if (d_light[j] != -1) {
             int old_index = atomicAdd(d_Req_size, 1);
-            d_Req[old_index].nodeId = d_light[i];
-            d_Req[old_index].dist = d_dists[v] != INT_MAX ? d_dists[v] + d_edge_weights[i] : INT_MAX;
+            d_Req[old_index].nodeId = d_light[j];
+            d_Req[old_index].dist = d_dists[v] != INT_MAX ? d_dists[v] + d_edge_weights[j] : INT_MAX;
             // printf("old_index: %d, node_id: %d, num_nodes: %d, dist: %d\n", old_index, d_light[i], num_nodes, d_dists[v] + d_edge_weights[i]);
         }
     }
