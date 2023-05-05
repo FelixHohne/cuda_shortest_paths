@@ -434,37 +434,18 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
     int* d_neighbor_nodes;
     int* d_edge_weights;
 
-    cudaStream_t stream1, stream2, stream3; 
-    cudaStreamCreate(&stream1);
-    cudaStreamCreate(&stream2);
-    cudaStreamCreate(&stream3);
-
-
-    cudaMallocAsync((void**) &d_row_ptrs, (graphCSR.numNodes + 1) * sizeof(int), stream1);
-
-    cudaMallocAsync((void**) &d_neighbor_nodes, (graphCSR.numEdges) * sizeof(int), stream2);
-
-    cudaMallocAsync((void**) &d_edge_weights, (graphCSR.numEdges) * sizeof(int), stream3);
-    
-    cudaMemcpyAsync(d_row_ptrs, graphCSR.rowPointers, (graphCSR.numNodes + 1) * sizeof(int), cudaMemcpyHostToDevice, stream1);
-    
-    cudaMemcpyAsync(d_neighbor_nodes, graphCSR.neighborNodes, graphCSR.numEdges * sizeof(int), cudaMemcpyHostToDevice, stream2);
-
-    cudaMemcpyAsync(d_edge_weights, graphCSR.edgeWeights, graphCSR.numEdges * sizeof(int), cudaMemcpyHostToDevice, stream3);    
-
-    cudaDeviceSynchronize();
     int* d_S;
-    cudaMalloc((void**) &d_S, graphCSR.numNodes * sizeof(int));
 
     // Invariant: non-dense pack. 
     // Invariant: -1 means element is empty. 
     int* d_B; 
-    cudaMalloc((void**) &d_B, graphCSR.numNodes * sizeof(int));
 
     int* d_dists;
-    cudaMalloc((void**) &d_dists, graphCSR.numNodes * sizeof(int));
     int* d_preds;
-    cudaMalloc((void**) &d_preds, graphCSR.numNodes * sizeof(int));
+
+    // Device Req array
+    // Elements up to d_Req_size are correct, beyond is garbage
+    ReqElement* d_Req; 
 
     /*
     d_light and d_heavy are arrays of the same length as graphCSR.numEdges
@@ -475,16 +456,50 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
     */
     int* d_light;
     int* d_heavy;
-    cudaMalloc((void**) &d_light, graphCSR.numEdges * sizeof(int));
-    cudaMalloc((void**) &d_heavy, graphCSR.numEdges * sizeof(int));
+
+    cudaStream_t stream1, stream2, stream3, stream4, stream5, stream6, stream7, stream8, stream9, stream10; 
+    cudaStreamCreate(&stream1);
+    cudaStreamCreate(&stream2);
+    cudaStreamCreate(&stream3);
+    cudaStreamCreate(&stream4);
+    cudaStreamCreate(&stream5);
+    cudaStreamCreate(&stream6);
+    cudaStreamCreate(&stream7);
+    cudaStreamCreate(&stream8);
+    cudaStreamCreate(&stream9);
+    cudaStreamCreate(&stream10);
+
+    cudaMallocAsync((void**) &d_row_ptrs, (graphCSR.numNodes + 1) * sizeof(int), stream1);
+
+    cudaMallocAsync((void**) &d_neighbor_nodes, (graphCSR.numEdges) * sizeof(int), stream2);
+
+    cudaMallocAsync((void**) &d_edge_weights, (graphCSR.numEdges) * sizeof(int), stream3);
+
+    cudaMallocAsync((void**) &d_S, graphCSR.numNodes * sizeof(int), stream4);
+
+    cudaMallocAsync((void**) &d_dists, graphCSR.numNodes * sizeof(int), stream5);
+
+    cudaMallocAsync((void**) &d_preds, graphCSR.numNodes * sizeof(int), stream6);
+
+    cudaMallocAsync((void**) &d_Req, graphCSR.numEdges * sizeof(ReqElement), stream7); 
+
+    cudaMallocAsync((void**) &d_B, graphCSR.numNodes * sizeof(int), stream8);
+
+    cudaMallocAsync((void**) &d_light, graphCSR.numEdges * sizeof(int), stream9);
+    
+    cudaMallocAsync((void**) &d_heavy, graphCSR.numEdges * sizeof(int), stream10);
+
+    cudaMemcpyAsync(d_row_ptrs, graphCSR.rowPointers, (graphCSR.numNodes + 1) * sizeof(int), cudaMemcpyHostToDevice, stream1);
+
+    cudaMemcpyAsync(d_neighbor_nodes, graphCSR.neighborNodes, graphCSR.numEdges * sizeof(int), cudaMemcpyHostToDevice, stream2);
+
+    cudaMemcpyAsync(d_edge_weights, graphCSR.edgeWeights, graphCSR.numEdges * sizeof(int), cudaMemcpyHostToDevice, stream3);    
+
+    cudaDeviceSynchronize();
+
     initialize_light_heavy_arrays<<<edge_blks, NUM_THREADS>>>(d_light, d_heavy, d_neighbor_nodes, d_edge_weights, graphCSR.numEdges, Delta);
 
     int i = 0; 
-
-    // Device Req array
-    // Elements up to d_Req_size are correct, beyond is garbage
-    ReqElement* d_Req; 
-    cudaMalloc((void**) &d_Req, graphCSR.numEdges * sizeof(ReqElement)); 
 
     int* d_Req_size; 
     cudaMallocManaged(&d_Req_size, sizeof(int)); 
