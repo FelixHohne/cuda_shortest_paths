@@ -119,7 +119,7 @@ int main(int argc, char* argv[]) {
     
 
     CSR graphCSR;
-    if (ASYNC_MEMORY && algo == "gpu-bellman-ford" || algo == "gpu-delta-stepping") {
+    if (ASYNC_MEMORY && (algo == "gpu-bellman-ford" || algo == "gpu-delta-stepping")) {
         graphCSR = construct_sparse_CSR(adjList, max_node, true);
     }
     else {

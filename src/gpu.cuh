@@ -5,8 +5,8 @@
 
 #define EDGE_WISE_SHARED_MEMORY false // Requires EDGE_WISE_BELLMAN_FORD = true
 static const bool ASYNC_MEMORY = true; 
-static const bool ELEMENT_WISE_TIMING = false; 
-static const bool EDGE_WISE_BELLMAN_FORD = true; 
+static const bool ELEMENT_WISE_TIMING = true; 
+static const bool EDGE_WISE_BELLMAN_FORD = false; 
 
 void initializeBellmanFord(CSR graphCSR, int source, int num_nodes, int* d, int* p);
 

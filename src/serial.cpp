@@ -23,15 +23,19 @@ int num_nodes, int* d, int* p) {
      * Current implementation assumes edge weights are always 1.
      */
 
+    auto start_algo = std::chrono::steady_clock::now();
+
     for (int i = 0; i < num_nodes; i++) {
         d[i] = INF; 
         p[i] = -1;
     }
     
     d[source] = 0;
+    int counter = 0;
     std::set<std::pair<int, int>> q; // q.first = cost, q.second is node id
     q.insert({0, source});
     while (!q.empty()) {
+        counter++;
         int v = q.begin()->second;
         q.erase(q.begin());
         for (auto edge: adjList[v]) {
@@ -46,9 +50,20 @@ int num_nodes, int* d, int* p) {
                 q.insert({d[to], to});
             }
         }
+
+        if (counter % 1000 == 0) {
+            auto end_algo = std::chrono::steady_clock::now();
+            std::chrono::duration<double> get_algo_time = end_algo - start_algo;
+            double algo_time = get_algo_time.count();
+            std :: cout << "Dijkstra algo time:"  << algo_time << std :: endl; 
+        }
     }
 
     std :: cout << "Finished Dijkstra" << std :: endl;
+    auto end_algo = std::chrono::steady_clock::now();
+    std::chrono::duration<double> get_algo_time = end_algo - start_algo;
+    double algo_time = get_algo_time.count();
+    std :: cout << "Dijkstra algo time" << algo_time << std :: endl; 
 }
 
 void relax(int v, int new_dist, std::unordered_map<int, std::list<int>>& B, int* dists, int delta) {

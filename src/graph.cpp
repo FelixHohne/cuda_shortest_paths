@@ -49,6 +49,7 @@ CSR construct_sparse_CSR(std::unordered_map<int, std::list<int>> adj_list, int m
     int* neighbor_nodes; // ids of neighbor nodes in adj_list
     int* edge_weights; 
 
+    std :: cout << "is cuda: " << is_cuda << std :: endl;
     if (is_cuda) {
         cudaMallocHost((void**) &row_pointers, (num_nodes + 1) * sizeof(int)); 
 

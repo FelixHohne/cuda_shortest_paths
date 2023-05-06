@@ -401,7 +401,7 @@ __global__ void is_empty_B(int* d_B, int num_nodes, bool* is_empty) {
         return;
     }
 
-    if (d_B[tid] != -1) {
+    if (d_B[tid] != -1 && is_empty[0]) {
         is_empty[0] = false;
     }
 }
@@ -413,7 +413,7 @@ __global__ void is_empty_B_i(int* d_B, int num_nodes, bool* is_empty, int i) {
         return;
     }
 
-    if (d_B[tid] == i) {
+    if (d_B[tid] == i && is_empty[0]) {
         is_empty[0] = false;
     }
 
@@ -423,6 +423,20 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
 
     int num_nodes = max_node + 1; 
     std::cout << "Begin CUDA Delta Stepping with Delta: " << Delta << std::endl;
+
+    cudaEvent_t begin_memory_alloc, end_memory_alloc; 
+    float memory_alloc_time = 0; 
+
+    float total_light_req_time = 0;
+    float total_thrust_time = 0; 
+    float total_relax_time = 0; 
+
+    if (ELEMENT_WISE_TIMING) {
+        cudaEventCreate(&begin_memory_alloc); 
+        cudaEventCreate(&end_memory_alloc); 
+        cudaEventRecord(begin_memory_alloc);
+    }
+
     int node_blks = (graphCSR.numNodes + NUM_THREADS - 1) / NUM_THREADS;
     int edge_blks = (graphCSR.numEdges + NUM_THREADS - 1) / NUM_THREADS;
 
@@ -578,6 +592,16 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
         Adds source to B[0]. 
         */
         delta_stepping_initialize<<<node_blks, NUM_THREADS>>>(d_dists, d_B, graphCSR.numNodes, source);
+
+        cudaDeviceSynchronize(); 
+    }
+
+    if (ELEMENT_WISE_TIMING) {
+        cudaEventRecord(end_memory_alloc);
+        cudaEventSynchronize(end_memory_alloc);
+
+        cudaEventElapsedTime(&memory_alloc_time, begin_memory_alloc, end_memory_alloc); 
+
     }
     
 
@@ -590,7 +614,27 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
         while (!is_empty[0]) {
             
             d_Req_size[0] = 0; 
+
+            float light_req_time = 0; 
+            cudaEvent_t light_req_start, light_req_end; 
+
+            if (ELEMENT_WISE_TIMING) {
+                
+                cudaEventCreate(&light_req_start); 
+                cudaEventCreate(&light_req_end); 
+                cudaEventRecord(light_req_start);
+            }
+
             computeLightReq<<<node_blks, NUM_THREADS>>>(d_B, d_light, d_row_ptrs, d_edge_weights, num_nodes, i, d_Req_size, d_dists, d_Req);
+
+            if (ELEMENT_WISE_TIMING) {
+                cudaEventRecord(light_req_end);
+                cudaEventSynchronize(light_req_end);
+
+                cudaEventElapsedTime(&light_req_time, light_req_start, light_req_end); 
+
+                total_light_req_time += light_req_time;
+            }
 
             // This cudaDeviceSynchronize is required; causes correctness issues to remove it. 
             cudaDeviceSynchronize();
@@ -599,13 +643,50 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
                 d_B, d_S, i, num_nodes
             );
 
+
+            cudaEvent_t thrust_start, thrust_end; 
+            float thrust_time = 0; 
+            if (ELEMENT_WISE_TIMING) {
+                cudaEventCreate(&thrust_start); 
+                cudaEventCreate(&thrust_end); 
+                cudaEventRecord(thrust_start);
+            }
+
             thrust::sort(thrust::device, d_Req, d_Req + d_Req_size[0]);
+
+            if (ELEMENT_WISE_TIMING) {
+                cudaEventRecord(thrust_end);
+                cudaEventSynchronize(thrust_end);
+
+                cudaEventElapsedTime(&thrust_time, thrust_start, thrust_end); 
+
+                total_thrust_time += thrust_time;
+            }
+            
 
             cudaDeviceSynchronize(); 
 
-            // print_d_Req<<<edge_blks, NUM_THREADS>>>(d_Req_size[0], d_Req, graphCSR.numEdges);
-            
+            float relax_time = 0; 
+            cudaEvent_t relax_start, relax_end; 
+
+            if (ELEMENT_WISE_TIMING) {
+                
+                cudaEventCreate(&relax_start); 
+                cudaEventCreate(&relax_end); 
+                cudaEventRecord(relax_start);
+            }
+
             relax<<<edge_blks, NUM_THREADS>>>(d_B, d_Req, d_dists, d_Req_size[0], graphCSR.numEdges, Delta);
+
+            if (ELEMENT_WISE_TIMING) {
+                cudaEventRecord(relax_end);
+                cudaEventSynchronize(relax_end);
+
+                cudaEventElapsedTime(&relax_time, relax_start, relax_end); 
+
+                total_relax_time += relax_time;
+            }
+
 
             is_empty[0] = true;
             is_empty_B_i<<<node_blks, NUM_THREADS>>>(d_B, num_nodes, is_empty, i);
@@ -620,6 +701,7 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
         d_Req_size[0] = 0; 
 
         cudaDeviceSynchronize();
+
         computeHeavyReq<<<node_blks, NUM_THREADS>>>(d_S, d_heavy, d_row_ptrs, d_edge_weights, num_nodes, i, d_Req_size, d_dists, d_Req);
 
         relax<<<edge_blks, NUM_THREADS>>>(d_B, d_Req, d_dists, *d_Req_size, graphCSR.numEdges, Delta);
@@ -633,7 +715,31 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
         cudaDeviceSynchronize();
     }
 
+    cudaEvent_t begin_cpy_to_host, end_cpy_to_host; 
+    float memory_copy_time = 0; 
+
+    if (ELEMENT_WISE_TIMING) {
+        cudaEventCreate(&begin_cpy_to_host); 
+        cudaEventCreate(&end_cpy_to_host); 
+        cudaEventRecord(begin_cpy_to_host);
+    }
+
     cudaMemcpy(d, d_dists, graphCSR.numNodes * sizeof(int), cudaMemcpyDeviceToHost);
     cudaMemcpy(p, d_preds, graphCSR.numNodes * sizeof(int), cudaMemcpyDeviceToHost);
+
+    if (ELEMENT_WISE_TIMING) {
+        cudaEventRecord(end_cpy_to_host);
+        cudaEventSynchronize(end_cpy_to_host);
+
+        cudaEventElapsedTime(&memory_copy_time, begin_cpy_to_host, end_cpy_to_host); 
+
+        std :: cout << "Memory Op time in milis: " << memory_alloc_time + memory_copy_time << std :: endl;
+
+        std :: cout << "Thrust sort time" << total_thrust_time << std :: endl;
+
+        std :: cout << "Light Req time: " << total_light_req_time << std :: endl;
+
+        std:: cout << "Total relax time: " << total_relax_time << std :: endl;
+    }
 
 }
