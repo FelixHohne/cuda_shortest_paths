@@ -299,31 +299,38 @@ __global__ void initialize_d_Req(ReqElement* d_Req, int num_edges) {
 }
 
 /*
-Node-based parallelization.
-Computes Req = {(w, dist[v] + dist(v, w)) : v \in B[i] && (v, w) \in light(v)}
+Edge-based parallelization.
+Computes Req = {(v, dist[u] + dist(u, v)) : u \in B[i] && (u, v) \in set(light(u))}
 */
-__global__ void computeLightReq(int* d_B, int* d_light, int* d_row_ptrs, int* d_edge_weights, int num_nodes, int i, int* d_Req_size, int* d_dists, ReqElement* d_Req) {
+__global__ void computeLightReq(int* d_B, int* d_light, int* d_node_of_edge, int* d_edge_weights, int num_nodes, int num_edges, int i, int* d_Req_size, int* d_dists, ReqElement* d_Req) {
     int tid = threadIdx.x + blockDim.x * blockIdx.x;
-    if (tid >= num_nodes) {
-        return;
-    }
-   
-    if (d_B[tid] != i) {
+    if (tid >= num_edges) {
         return;
     }
 
-    int v = tid;
-    for (int j = d_row_ptrs[v]; j < d_row_ptrs[v + 1]; j++) {
-        if (d_light[j] != -1) {
-            int old_index = atomicAdd(d_Req_size, 1);
-            d_Req[old_index].nodeId = d_light[j];
-            d_Req[old_index].dist = d_dists[v] != INT_MAX ? d_dists[v] + d_edge_weights[j] : INT_MAX;
-            // printf("old_index: %d, node_id: %d, num_nodes: %d, dist: %d\n", old_index, d_light[i], num_nodes, d_dists[v] + d_edge_weights[i]);
-        }
+    // printf("tid: %d, d_node_of_edge[tid]: %d\n", tid, d_node_of_edge[tid]);
+    int v = d_light[tid]; 
+
+    // printf("tid: %d, v: %d\n", tid, v);
+    // Not a light edge 
+    if (v == -1) {
+        return; 
+    }
+
+    int u = d_node_of_edge[tid]; 
+
+    // printf("u: %d, v: %d \n", u, v);
+    // u not in B[i]
+    if (d_B[u] != i) {
+        return;
     }
 
 
+    int old_index = atomicAdd(d_Req_size, 1);
+    d_Req[old_index].nodeId = v;
+    d_Req[old_index].dist = d_dists[u] != INT_MAX ? d_dists[u] + d_edge_weights[v] : INT_MAX;
 
+    // printf("Proposed DReq: %d, %d\n", d_Req[old_index].nodeId, d_Req[old_index].dist);
 }
 
 __global__ void printB(int* d_B, int num_nodes) {
@@ -604,6 +611,12 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
 
     }
     
+    int* d_node_of_edge;
+    cudaMallocManaged((void**) &d_node_of_edge, graphCSR.numEdges * sizeof(int));
+
+    computeNodeOfEdge<<<node_blks, NUM_THREADS>>>(graphCSR.numEdges, num_nodes, d_row_ptrs, d_neighbor_nodes, d_node_of_edge); 
+
+    cudaDeviceSynchronize();
 
     while (!is_empty[0]) {
         clear_S<<<node_blks, NUM_THREADS>>>(d_S, num_nodes);
@@ -625,7 +638,8 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
                 cudaEventRecord(light_req_start);
             }
 
-            computeLightReq<<<node_blks, NUM_THREADS>>>(d_B, d_light, d_row_ptrs, d_edge_weights, num_nodes, i, d_Req_size, d_dists, d_Req);
+
+            computeLightReq<<<edge_blks, NUM_THREADS>>>(d_B, d_light, d_node_of_edge, d_edge_weights, num_nodes, graphCSR.numEdges, i, d_Req_size, d_dists, d_Req);
 
             if (ELEMENT_WISE_TIMING) {
                 cudaEventRecord(light_req_end);
