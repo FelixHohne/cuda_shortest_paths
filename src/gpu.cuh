@@ -7,6 +7,7 @@
 static const bool ASYNC_MEMORY = true; 
 static const bool ELEMENT_WISE_TIMING = true; 
 static const bool EDGE_WISE_BELLMAN_FORD = false; 
+static const bool EDGE_WISE_DELTA_STEPPING = true; 
 
 void initializeBellmanFord(CSR graphCSR, int source, int num_nodes, int* d, int* p);
 
