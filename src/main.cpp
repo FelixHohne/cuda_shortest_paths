@@ -8,8 +8,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <cuda_runtime_api.h>
-#include <cuda.h>
+// #include <cuda_runtime_api.h>
+// #include <cuda.h>
 
 // commented out since G2 doesn't like it
 // #include <cuda.h>
@@ -43,7 +43,7 @@ int find_int_arg(int argc, char* argv[], const char* option, int default_value) 
     return default_value;
 }
 
-bool DEBUG_PRINT = false;
+bool DEBUG_PRINT = true;
 std::vector<std::string> algos{
     "serial-dijkstra",
     "serial-delta-stepping",
@@ -138,8 +138,8 @@ int main(int argc, char* argv[]) {
 
     // Doesn't seem to be worth it. 
     if (false) {
-        cudaMallocHost((void**) &min_distances, (max_node) * sizeof(int)); 
-        cudaMallocHost((void**) &p, (max_node) * sizeof(int)); 
+        // cudaMallocHost((void**) &min_distances, (max_node) * sizeof(int)); 
+        // cudaMallocHost((void**) &p, (max_node) * sizeof(int)); 
     }
     else {
         min_distances = new int[max_node]; 

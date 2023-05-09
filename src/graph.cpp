@@ -8,8 +8,8 @@
 #include <iostream>
 #include <unordered_map>
 #include <vector>
-#include <cuda_runtime_api.h>
-#include <cuda.h>
+// #include <cuda_runtime_api.h>
+// #include <cuda.h>
 
 void print_adj_list(std::unordered_map<int, std::list<int>>  adjList) {
     for (const auto &token: adjList) {
@@ -51,7 +51,7 @@ CSR construct_sparse_CSR(std::unordered_map<int, std::list<int>> adj_list, int m
 
     std :: cout << "is cuda: " << is_cuda << std :: endl;
     if (is_cuda) {
-        cudaMallocHost((void**) &row_pointers, (num_nodes + 1) * sizeof(int)); 
+        // cudaMallocHost((void**) &row_pointers, (num_nodes + 1) * sizeof(int)); 
 
     }
     else {
@@ -65,8 +65,8 @@ CSR construct_sparse_CSR(std::unordered_map<int, std::list<int>> adj_list, int m
     }
 
     if (is_cuda) {
-        cudaMallocHost((void**) &neighbor_nodes, (num_edges) * sizeof(int)); 
-        cudaMallocHost((void**) &edge_weights, (num_edges) * sizeof(int)); 
+        // cudaMallocHost((void**) &neighbor_nodes, (num_edges) * sizeof(int)); 
+        // cudaMallocHost((void**) &edge_weights, (num_edges) * sizeof(int)); 
     }
     else {
         neighbor_nodes = new int[num_edges];

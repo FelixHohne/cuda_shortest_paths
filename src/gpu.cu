@@ -298,83 +298,39 @@ __global__ void initialize_d_Req(ReqElement* d_Req, int num_edges) {
     d_Req[tid].dist = -1;
 }
 
-/*
-Edge-based parallelization.
-*/
-
-__global__ void EdgeWiseComputeLightReq(int num_nodes, int num_edges, int* d_dists, int* d_preds, int* d_node_of_edge, int* d_neighbor_nodes, int* d_edge_weights) {
-
-    /*
-    Invariants: We consider relaxation of edge (u, v). 
-    v = d_neighbor_nodes[tid]. 
-    u = node_of_edge[v]. 
-    As u & v are nodes, 0 <= u <= max_node and 0 <= v <= max_node. 
-    */
-    int tid = threadIdx.x + blockDim.x * blockIdx.x;
-    
-    if (tid >= num_edges) {
-        return;
-    }
-
-    if (EDGE_WISE_SHARED_MEMORY) {
-
-    __shared__ int tmp_neighbor_nodes[NUM_THREADS]; 
-    __shared__ int tmp_node_of_edge[NUM_THREADS]; 
-
-    tmp_neighbor_nodes[threadIdx.x] = d_neighbor_nodes[tid]; 
-    tmp_node_of_edge[threadIdx.x] = d_node_of_edge[tid]; 
-    __syncthreads();
-
-    int v = tmp_neighbor_nodes[threadIdx.x];
-    int u = tmp_node_of_edge[threadIdx.x];
-
-    // TODO: Check if d_edge_weights[u] or d_edge_weights[v]. 
-    if (d_dists[u] != INT_MAX && d_dists[u] + d_edge_weights[u] < d_dists[v]) {
-        atomicExch(d_dists + v,  d_dists[u] + d_edge_weights[u]);
-        // atomicExch(d_preds + v, u);
-    }
-
-    } 
-    else {
-        int v = d_neighbor_nodes[tid]; 
-        int u = d_node_of_edge[tid]; 
-
-        // TODO: Check if d_edge_weights[u] or d_edge_weights[v]. 
-        if (d_dists[u] != INT_MAX && d_dists[u] + d_edge_weights[u] < d_dists[v]) {
-            atomicExch(d_dists + v,  d_dists[u] + d_edge_weights[u]);
-            // atomicExch(d_preds + v, u);
-        }
-    }
-    
-}
 
 /*
 Edge-based parallelization.
 Computes Req = {(v, dist[u] + dist(u, v)) : u \in B[i] && (u, v) \in set(light(u))}
 */
-__global__ void computeLightReq(int* d_B, int* d_light, int* d_node_of_edge, int* d_edge_weights, int num_nodes, int i, int* d_Req_size, int* d_dists, ReqElement* d_Req) {
+__global__ void computeLightReq(int* d_B, int* d_light, int* d_node_of_edge, int* d_edge_weights, int num_nodes, int num_edges, int i, int* d_Req_size, int* d_dists, ReqElement* d_Req) {
     int tid = threadIdx.x + blockDim.x * blockIdx.x;
-    if (tid >= num_edges) {
-        return;
-    }
+    printf("Compute light req tid: %d\n", tid); 
+    printf("sdaklfjasdf\n");
+    // if (tid >= num_edges) {
+    //     return;
+    // }
 
-    int v = d_light[tid]; 
+    // int v = d_light[tid]; 
 
-    // Not a light edge 
-    if (v == -1) {
-        return; 
-    }
+    // printf("tid: %d, v: %d\n", tid, v);
+    // // Not a light edge 
+    // if (v == -1) {
+    //     return; 
+    // }
 
-    int u = d_node_of_edge[tid]; 
+    // int u = d_node_of_edge[tid]; 
 
-    // u not in B[i]
-    if (d_B[u] != i) {
-        return;
-    }
+    // // u not in B[i]
+    // if (d_B[u] != i) {
+    //     return;
+    // }
 
-    int old_index = atomicAdd(d_Req_size, 1);
-    d_Req[old_index].nodeId = v;
-    d_Req[old_index].dist = d_dists[u] != INT_MAX ? d_dists[u] + d_edge_weights[v] : INT_MAX;
+    // printf("u: %d, v: %d \n", u, v);
+
+    // int old_index = atomicAdd(d_Req_size, 1);
+    // d_Req[old_index].nodeId = v;
+    // d_Req[old_index].dist = d_dists[u] != INT_MAX ? d_dists[u] + d_edge_weights[v] : INT_MAX;
 }
 
 
@@ -532,84 +488,84 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
 
     if (ASYNC_MEMORY) {
 
-        std :: cout << "Using Async Memory" << std :: endl;
-        cudaStream_t stream1, stream2, stream3, stream4, stream5, stream6, stream7, stream8, stream9, stream10; 
-        cudaStreamCreate(&stream1);
-        cudaStreamCreate(&stream2);
-        cudaStreamCreate(&stream3);
-        cudaStreamCreate(&stream4);
-        cudaStreamCreate(&stream5);
-        cudaStreamCreate(&stream6);
-        cudaStreamCreate(&stream7);
-        cudaStreamCreate(&stream8);
-        cudaStreamCreate(&stream9);
-        cudaStreamCreate(&stream10);
+    //     std :: cout << "Using Async Memory" << std :: endl;
+    //     cudaStream_t stream1, stream2, stream3, stream4, stream5, stream6, stream7, stream8, stream9, stream10; 
+    //     cudaStreamCreate(&stream1);
+    //     cudaStreamCreate(&stream2);
+    //     cudaStreamCreate(&stream3);
+    //     cudaStreamCreate(&stream4);
+    //     cudaStreamCreate(&stream5);
+    //     cudaStreamCreate(&stream6);
+    //     cudaStreamCreate(&stream7);
+    //     cudaStreamCreate(&stream8);
+    //     cudaStreamCreate(&stream9);
+    //     cudaStreamCreate(&stream10);
 
-        cudaEvent_t event1, event2, event3, event4, event8;
+    //     cudaEvent_t event1, event2, event3, event4, event8;
 
-        cudaEventCreate(&event1);
-        cudaEventCreate(&event2);
-        cudaEventCreate(&event3); 
-        cudaEventCreate(&event4);
-        cudaEventCreate(&event8);
+    //     cudaEventCreate(&event1);
+    //     cudaEventCreate(&event2);
+    //     cudaEventCreate(&event3); 
+    //     cudaEventCreate(&event4);
+    //     cudaEventCreate(&event8);
 
 
-        cudaMallocAsync((void**) &d_row_ptrs, (graphCSR.numNodes + 1) * sizeof(int), stream1);
+    //     cudaMallocAsync((void**) &d_row_ptrs, (graphCSR.numNodes + 1) * sizeof(int), stream1);
 
-        cudaMallocAsync((void**) &d_neighbor_nodes, (graphCSR.numEdges) * sizeof(int), stream2);
+    //     cudaMallocAsync((void**) &d_neighbor_nodes, (graphCSR.numEdges) * sizeof(int), stream2);
 
-        cudaMallocAsync((void**) &d_edge_weights, (graphCSR.numEdges) * sizeof(int), stream3);
+    //     cudaMallocAsync((void**) &d_edge_weights, (graphCSR.numEdges) * sizeof(int), stream3);
 
-        cudaMallocAsync((void**) &d_S, graphCSR.numNodes * sizeof(int), stream4);
+    //     cudaMallocAsync((void**) &d_S, graphCSR.numNodes * sizeof(int), stream4);
 
-        cudaEventRecord(event4, stream4); 
+    //     cudaEventRecord(event4, stream4); 
 
-        cudaMallocAsync((void**) &d_dists, graphCSR.numNodes * sizeof(int), stream5);
+    //     cudaMallocAsync((void**) &d_dists, graphCSR.numNodes * sizeof(int), stream5);
 
-        cudaMallocAsync((void**) &d_preds, graphCSR.numNodes * sizeof(int), stream6);
+    //     cudaMallocAsync((void**) &d_preds, graphCSR.numNodes * sizeof(int), stream6);
 
-        cudaMallocAsync((void**) &d_Req, graphCSR.numEdges * sizeof(ReqElement), stream7); 
+    //     cudaMallocAsync((void**) &d_Req, graphCSR.numEdges * sizeof(ReqElement), stream7); 
 
-        cudaMallocAsync((void**) &d_B, graphCSR.numNodes * sizeof(int), stream8);
+    //     cudaMallocAsync((void**) &d_B, graphCSR.numNodes * sizeof(int), stream8);
 
-        cudaEventRecord(event8, stream8); 
+    //     cudaEventRecord(event8, stream8); 
 
-        cudaMallocAsync((void**) &d_light, graphCSR.numEdges * sizeof(int), stream9);
+    //     cudaMallocAsync((void**) &d_light, graphCSR.numEdges * sizeof(int), stream9);
         
-        cudaMallocAsync((void**) &d_heavy, graphCSR.numEdges * sizeof(int), stream10);
+    //     cudaMallocAsync((void**) &d_heavy, graphCSR.numEdges * sizeof(int), stream10);
 
-        cudaMemcpyAsync(d_row_ptrs, graphCSR.rowPointers, (graphCSR.numNodes + 1) * sizeof(int), cudaMemcpyHostToDevice, stream1);
+    //     cudaMemcpyAsync(d_row_ptrs, graphCSR.rowPointers, (graphCSR.numNodes + 1) * sizeof(int), cudaMemcpyHostToDevice, stream1);
 
-        cudaEventRecord(event1, stream1); 
+    //     cudaEventRecord(event1, stream1); 
 
-        cudaMemcpyAsync(d_neighbor_nodes, graphCSR.neighborNodes, graphCSR.numEdges * sizeof(int), cudaMemcpyHostToDevice, stream2);
+    //     cudaMemcpyAsync(d_neighbor_nodes, graphCSR.neighborNodes, graphCSR.numEdges * sizeof(int), cudaMemcpyHostToDevice, stream2);
 
-        cudaEventRecord(event2, stream2); 
+    //     cudaEventRecord(event2, stream2); 
 
-        cudaMemcpyAsync(d_edge_weights, graphCSR.edgeWeights, graphCSR.numEdges * sizeof(int), cudaMemcpyHostToDevice, stream3);    
+    //     cudaMemcpyAsync(d_edge_weights, graphCSR.edgeWeights, graphCSR.numEdges * sizeof(int), cudaMemcpyHostToDevice, stream3);    
 
-        cudaEventRecord(event3, stream3); 
+    //     cudaEventRecord(event3, stream3); 
 
-        cudaEventSynchronize(event1); 
-        cudaEventSynchronize(event2); 
-        cudaEventSynchronize(event3); 
+    //     cudaEventSynchronize(event1); 
+    //     cudaEventSynchronize(event2); 
+    //     cudaEventSynchronize(event3); 
 
-        // Does not use dynamic memory
-        initialize_light_heavy_arrays<<<edge_blks, NUM_THREADS, 0, stream3>>>(d_light, d_heavy, d_neighbor_nodes, d_edge_weights, graphCSR.numEdges, Delta);
+    //     // Does not use dynamic memory
+    //     initialize_light_heavy_arrays<<<edge_blks, NUM_THREADS, 0, stream3>>>(d_light, d_heavy, d_neighbor_nodes, d_edge_weights, graphCSR.numEdges, Delta);
 
-        cudaEventSynchronize(event4); 
-        cudaEventSynchronize(event8); 
+    //     cudaEventSynchronize(event4); 
+    //     cudaEventSynchronize(event8); 
 
-        /*
-        Initializes d_dists to INT_MAX 
-        Clears B[i]
-        Sets source distance to 0 
-        Adds source to B[0]. 
-        Does not use dynamic memory.
-        */
-        delta_stepping_initialize<<<node_blks, NUM_THREADS, 0, stream8>>>(d_dists, d_B, graphCSR.numNodes, source);
+    //     /*
+    //     Initializes d_dists to INT_MAX 
+    //     Clears B[i]
+    //     Sets source distance to 0 
+    //     Adds source to B[0]. 
+    //     Does not use dynamic memory.
+    //     */
+    //     delta_stepping_initialize<<<node_blks, NUM_THREADS, 0, stream8>>>(d_dists, d_B, graphCSR.numNodes, source);
 
-        cudaDeviceSynchronize(); 
+    //     cudaDeviceSynchronize(); 
     }
 
     else {
@@ -656,6 +612,7 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
 
     }
 
+    int* d_node_of_edge;
 
     cudaMalloc((void**) &d_node_of_edge, graphCSR.numEdges * sizeof(int));
 
@@ -682,7 +639,9 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
                 cudaEventRecord(light_req_start);
             }
             
-            computeLightReq<<<edge_blks, NUM_THREADS>>>(d_B, d_light, d_node_of_edge, d_edge_weights, num_nodes, i, d_Req_size, d_dists, d_Req);
+            printf("10:54 computing light req\n");
+            std :: cout << "edge blocks: " << edge_blks << std :: endl;
+            computeLightReq<<<edge_blks, NUM_THREADS>>>(d_B, d_light, d_node_of_edge, d_edge_weights, num_nodes, graphCSR.numEdges, i, d_Req_size, d_dists, d_Req);
 
             if (ELEMENT_WISE_TIMING) {
                 cudaEventRecord(light_req_end);
@@ -696,9 +655,12 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
             // This cudaDeviceSynchronize is required; causes correctness issues to remove it. 
             cudaDeviceSynchronize();
 
+            printf("10:58 finish\n");
             update_S_clear_B_i<<<node_blks, NUM_THREADS>>>(
                 d_B, d_S, i, num_nodes
             );
+
+        
 
 
             cudaEvent_t thrust_start, thrust_end; 
