@@ -6,6 +6,7 @@
 #define GRAPHCUDA_GRAPH_H
 #include <unordered_map>
 #include <list>
+#include <utility> // std::pair
 
 
 typedef struct CSR {
@@ -16,9 +17,9 @@ typedef struct CSR {
     int* edgeWeights;
 } CSR;
 
-
-std::unordered_map<int, std::list<int>> construct_adj_list(std::list<std::pair<int, int>> edge_list);
-void print_adj_list(std::unordered_map<int, std::list<int>>  adjList);
-CSR construct_sparse_CSR(std::unordered_map<int, std::list<int>> adjList, int max_node, bool is_cuda);
+// adjacency list = u -> list of neighbors represented as (v, edge_weight)
+std::unordered_map<int, std::list<std::pair<int, int>>> construct_adj_list(std::list<std::pair<std::pair<int, int>, int>> edge_list);
+void print_adj_list(std::unordered_map<int, std::list<std::pair<int, int>>>  adjList);
+CSR construct_sparse_CSR(std::unordered_map<int, std::list<std::pair<int, int>>> adjList, int max_node, bool is_cuda);
 
 #endif //GRAPHCUDA_GRAPH_H

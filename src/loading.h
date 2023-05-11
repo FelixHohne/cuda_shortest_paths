@@ -9,8 +9,9 @@
 #include <list>
 #include <string>
 
-void print_edge_list(std::list<std::pair<int, int>> parsed_edge_list);
-std::pair<std::list<std::pair<int, int>>, int> read_edge_list(std::string filename);
+// each edge is in the form ((u, v), weight)- note that all edges are undirected
+void print_edge_list(std::list<std::pair<std::pair<int, int>, int>> parsed_edge_list);
+std::pair<std::list<std::pair<std::pair<int, int>, int>>, int> read_edge_list(std::string filename, bool use_edge_weights);
 
 #endif //GRAPHCUDA_LOADING_H
 

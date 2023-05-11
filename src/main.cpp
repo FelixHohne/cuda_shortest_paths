@@ -93,9 +93,12 @@ int main(int argc, char* argv[]) {
     std::string output_file = find_string_arg(argc, argv, "-o", "");
 
     std::cout<< "Parsing edge list" << std::endl;
-    std :: cout << "Input file is: " << input_file << std :: endl;
+    std::cout << "Input file is: " << input_file << std :: endl;
+
+    // whether to use edge weights- defaults to a weight of 1 per edge
+    bool USE_EDGE_WEIGHTS = true;
     // construct adjacency list
-    auto [parsed_edge_list, max_node] = read_edge_list(input_file);
+    auto [parsed_edge_list, max_node] = read_edge_list(input_file, USE_EDGE_WEIGHTS);
     if (DEBUG_PRINT) {
         std::cout << "Number of nodes in the graph: " << max_node << std::endl; 
         std::cout << "Number of edges in the graph: " << parsed_edge_list.size() << std :: endl;
@@ -105,7 +108,7 @@ int main(int argc, char* argv[]) {
     if (DEBUG_PRINT) {
         print_edge_list(parsed_edge_list);
     }
-    std::unordered_map<int, std::list<int>> adjList = construct_adj_list(parsed_edge_list);
+    std::unordered_map<int, std::list<std::pair<int, int>>> adjList = construct_adj_list(parsed_edge_list);
 
     std::cout<<"Constructed adjacency list" << std::endl;
 
@@ -113,7 +116,7 @@ int main(int argc, char* argv[]) {
         std::cout << "Number of edges of node 9721 " << adjList[9721].size() << std::endl;
 
         for (auto v: adjList[9721]) {
-            std :: cout << v << std :: endl; 
+            std::cout << v.first << std :: endl; 
         }
     }
     
@@ -121,11 +124,10 @@ int main(int argc, char* argv[]) {
     CSR graphCSR;
     if (ASYNC_MEMORY && (algo == "gpu-bellman-ford" || algo == "gpu-delta-stepping")) {
         graphCSR = construct_sparse_CSR(adjList, max_node, true);
-    }
-    else {
+    } else {
         graphCSR = construct_sparse_CSR(adjList, max_node, false);
     }
-    std::cout<<"Constructed sparse CSR representation" << std::endl;
+    std::cout<< "Constructed sparse CSR representation" << std::endl;
     if (DEBUG_PRINT) {
         print_adj_list(adjList);
     }

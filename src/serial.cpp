@@ -16,7 +16,7 @@
 // Assume no max path length over INT_MAX.
 const int INF = INT_MAX;
 
-void st_dijkstra(std::unordered_map<int, std::list<int>>& adjList, int source, 
+void st_dijkstra(std::unordered_map<int, std::list<std::pair<int, int>>>& adjList, int source, 
 int num_nodes, int* d, int* p) {
     /*
      * Note: Implementation using Red-Black Tree via std::set.
@@ -39,9 +39,9 @@ int num_nodes, int* d, int* p) {
         int v = q.begin()->second;
         q.erase(q.begin());
         for (auto edge: adjList[v]) {
-            int to = edge;
-            // TODO: support graphs with weighted edges
-            int len = 1;
+            int to = edge.first;
+            // supports graphs with weighted edges
+            int len = edge.second;
 
             if (d[v] < INT_MAX && d[v] + len < d[to]) {
                 q.erase({d[to], to}); 
