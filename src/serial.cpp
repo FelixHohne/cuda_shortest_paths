@@ -11,6 +11,7 @@
 #include <vector>
 #include <set>
 #include <queue>
+#include <utility> // std::pair
 #include <bits/stdc++.h>
 #include <stdexcept>
 // Assume no max path length over INT_MAX.
@@ -65,25 +66,18 @@ int num_nodes, int* d, int* p) {
 }
 
 void relax(int v, int new_dist, std::unordered_map<int, std::list<int>>& B, int* dists, int delta) {
-
     if (new_dist < dists[v]) {
         if (v != 0 && B.find(floor(dists[v] / delta)) != B.end()) {
             B[floor(dists[v] / delta)].remove(v);
         }
 
-
         int new_bucket = floor(new_dist / delta);
-
         if (!B.contains(new_bucket)) {
             B.insert({new_bucket, std::list<int>()});
         }
 
-
         B[new_bucket].push_back(v); 
-
-
         dists[v] = new_dist; 
-
     }
 
     // std::cout << "B size: " << B.size() << std::endl;
@@ -95,22 +89,21 @@ void delta_stepping(CSR graph, int source, int num_nodes, int* dists, int* preds
         preds[i] = -1;
     }
 
-    std::unordered_map<int, std::list<int>> heavy;
-    std::unordered_map<int, std::list<int>> light;
+    std::unordered_map<int, std::list<std::pair<int, int>>> heavy;
+    std::unordered_map<int, std::list<std::pair<int, int>>> light;
     std::unordered_map<int, std::list<int>> B;
     std::vector<int> S;
     
     // initialize heavy and light
     for (int i = 0; i < num_nodes; i++) {
-        std::list<int> heavy_list;
-        std::list<int> light_list;
+        std::list<std::pair<int, int>> heavy_list;
+        std::list<std::pair<int, int>> light_list;
         for (int j = graph.rowPointers[i]; j < graph.rowPointers[i+1]; j++) {
-            // TODO: edge weights
-            int weight = 1;
+            int weight = graph.edgeWeights[j];
             if (weight > Delta) {
-                heavy_list.push_back(graph.neighborNodes[j]);
+                heavy_list.push_back({graph.neighborNodes[j], graph.edgeWeights[j]});
             } else if (weight > 0) {
-                light_list.push_back(graph.neighborNodes[j]);
+                light_list.push_back({graph.neighborNodes[j], graph.edgeWeights[j]});
             } else {
                 throw std::invalid_argument("Cannot have negative edge weights");
             }
@@ -139,18 +132,17 @@ void delta_stepping(CSR graph, int source, int num_nodes, int* dists, int* preds
 
         while (B.find(i) != B.end()) {
             // initialize Req
-            for (auto v: B[i]) {
-                if (light.contains(v)) {
-                    for (auto w: light[v]) {
-                        // TODO: Fix edge weights
-                        int new_distance = dists[v] + 1;
-                        if (Req.contains(w)) {
-                            new_distance = std::min(Req[w], new_distance);
+            for (auto u: B[i]) {
+                if (light.contains(u)) {
+                    for (auto [v, w]: light[u]) {
+                        int new_distance = dists[u] + w;
+                        if (Req.contains(v)) {
+                            new_distance = std::min(Req[v], new_distance);
                         }
-                        Req.insert({w, new_distance});
+                        Req.insert({v, new_distance});
                     }
                 }
-                S.push_back(v);
+                S.push_back(u);
             }
             B.erase(i);
 
@@ -162,15 +154,14 @@ void delta_stepping(CSR graph, int source, int num_nodes, int* dists, int* preds
         }
         Req.clear();
 
-        for (auto v: S) {
-            if (heavy.contains(v)) {
-                for (auto w: heavy[v]) {
-                    // TODO: Fix edge weights
-                    int new_distance = dists[v] + 1;
-                    if (Req.contains(w)) {
-                        new_distance = std::min(Req[w], new_distance);
+        for (auto u: S) {
+            if (heavy.contains(u)) {
+                for (auto [v, w]: heavy[u]) {
+                    int new_distance = dists[u] + w;
+                    if (Req.contains(v)) {
+                        new_distance = std::min(Req[v], new_distance);
                     }
-                    Req.insert({w, new_distance});
+                    Req.insert({v, new_distance});
                 }
             }
         }
