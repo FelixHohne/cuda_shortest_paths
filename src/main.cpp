@@ -96,7 +96,7 @@ int main(int argc, char* argv[]) {
     std::cout << "Input file is: " << input_file << std :: endl;
 
     // whether to use edge weights- defaults to a weight of 1 per edge
-    bool USE_EDGE_WEIGHTS = true;
+    bool USE_EDGE_WEIGHTS = false;
     // construct adjacency list
     auto [parsed_edge_list, max_node] = read_edge_list(input_file, USE_EDGE_WEIGHTS);
 
