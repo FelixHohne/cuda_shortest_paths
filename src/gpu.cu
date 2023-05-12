@@ -131,10 +131,9 @@ __global__ void bellman_initialize_dists_array(int* d_dists, int num_nodes, int 
 /**
  * Requires: no negative-weight cycles
  */
-void initializeBellmanFord(CSR graphCSR, int source, int max_node, int* d, int* p) {
+void initializeBellmanFord(CSR graphCSR, int source, int num_nodes, int* d, int* p) {
 
     struct timeval start, stop;
-    int num_nodes = max_node + 1; 
 
     int* d_dists;
     int* d_preds;
@@ -227,7 +226,10 @@ typedef struct ReqElement {
     int dist;
     __host__ __device__
     bool operator < (const ReqElement &b) const {
-        return nodeId < b.nodeId || dist < b.dist;
+        if (nodeId != b.nodeId) {
+            return nodeId < b.nodeId;
+        }
+        return dist < b.dist;
     }
 } ReqElement;
 
@@ -257,7 +259,6 @@ __global__ void relax(int* d_B, ReqElement* d_Req, int* d_dists, int d_Req_size,
         int v = d_Req[tid].nodeId;
         int new_dist = d_Req[tid].dist;
         if (new_dist < d_dists[v]) {
-            
             /*
             By if statement construction, only a single tid 
             will update a given node, since only one tid
@@ -307,9 +308,8 @@ __global__ void computeLightReq(int* d_B, int* d_light, int* d_node_of_edge, int
     if (tid >= num_edges) {
         return;
     }
-
     // printf("tid: %d, d_node_of_edge[tid]: %d\n", tid, d_node_of_edge[tid]);
-    int v = d_light[tid]; 
+    int v = d_light[tid];
 
     // printf("tid: %d, v: %d\n", tid, v);
     // Not a light edge 
@@ -317,7 +317,7 @@ __global__ void computeLightReq(int* d_B, int* d_light, int* d_node_of_edge, int
         return; 
     }
 
-    int u = d_node_of_edge[tid]; 
+    int u = d_node_of_edge[tid];
 
     // printf("u: %d, v: %d \n", u, v);
     // u not in B[i]
@@ -325,12 +325,11 @@ __global__ void computeLightReq(int* d_B, int* d_light, int* d_node_of_edge, int
         return;
     }
 
-
     int old_index = atomicAdd(d_Req_size, 1);
     d_Req[old_index].nodeId = v;
-    d_Req[old_index].dist = d_dists[u] != INT_MAX ? d_dists[u] + d_edge_weights[v] : INT_MAX;
+    d_Req[old_index].dist = d_dists[u] != INT_MAX ? d_dists[u] + d_edge_weights[tid] : INT_MAX;
 
-    // printf("Proposed DReq: %d, %d\n", d_Req[old_index].nodeId, d_Req[old_index].dist);
+    // printf("Proposed light d_Req in index %d: nodeId %d, dist %d\n", old_index, d_Req[old_index].nodeId, d_Req[old_index].dist);
 }
 
 __global__ void printB(int* d_B, int num_nodes) {
@@ -347,7 +346,7 @@ __global__ void printB(int* d_B, int num_nodes) {
 __global__ void print_d_Req(int d_Req_size, ReqElement* d_Req, int num_edges) {
 
     int tid = threadIdx.x + blockDim.x * blockIdx.x;
-    if (tid > d_Req_size) {
+    if (tid >= d_Req_size) {
         return;
     }
 
@@ -375,7 +374,6 @@ __global__ void computeHeavyReq(int* d_S, int* d_heavy, int* d_row_ptrs, int* d_
             d_Req[old_index].dist = d_dists[v] + d_edge_weights[i];
         }
     }
-    
 }
 
 // S = emptyset
@@ -397,7 +395,7 @@ __global__ void update_S_clear_B_i(int* d_B, int* d_S, int i, int num_nodes) {
     }
 
     if (d_B[tid] == i) {
-        d_S[tid] = tid;
+        d_S[tid] = i;
         d_B[tid] = -1; 
     }
 }
@@ -426,9 +424,17 @@ __global__ void is_empty_B_i(int* d_B, int num_nodes, bool* is_empty, int i) {
 
 }
 
-void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int* p, int Delta) {
+__global__ void print_array(int* a, int n) {
+    int tid = threadIdx.x + blockDim.x * blockIdx.x;
 
-    int num_nodes = max_node + 1; 
+    if (tid >= n) {
+        return;
+    }
+
+    printf("Index: %d, Element: %d\n", tid, a[tid]);
+}
+
+void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, int* p, int Delta) {
     std::cout << "Begin CUDA Delta Stepping with Delta: " << Delta << std::endl;
 
     cudaEvent_t begin_memory_alloc, end_memory_alloc; 
@@ -565,9 +571,7 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
         delta_stepping_initialize<<<node_blks, NUM_THREADS, 0, stream8>>>(d_dists, d_B, graphCSR.numNodes, source);
 
         cudaDeviceSynchronize(); 
-    }
-
-    else {
+    } else {
 
         std :: cout << "Using cudaMalloc" << std :: endl;
         cudaMalloc((void**) &d_row_ptrs, (graphCSR.numNodes + 1) * sizeof(int));
@@ -638,7 +642,6 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
                 cudaEventRecord(light_req_start);
             }
 
-
             computeLightReq<<<edge_blks, NUM_THREADS>>>(d_B, d_light, d_node_of_edge, d_edge_weights, num_nodes, graphCSR.numEdges, i, d_Req_size, d_dists, d_Req);
 
             if (ELEMENT_WISE_TIMING) {
@@ -689,7 +692,6 @@ void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int
                 cudaEventCreate(&relax_end); 
                 cudaEventRecord(relax_start);
             }
-
             relax<<<edge_blks, NUM_THREADS>>>(d_B, d_Req, d_dists, d_Req_size[0], graphCSR.numEdges, Delta);
 
             if (ELEMENT_WISE_TIMING) {
