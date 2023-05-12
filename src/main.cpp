@@ -44,7 +44,7 @@ int find_int_arg(int argc, char* argv[], const char* option, int default_value) 
 }
 
 bool DEBUG_PRINT = false;
-std::vector<std::string> algos{
+std::vector<std::string> algos {
     "serial-dijkstra",
     "serial-delta-stepping",
     "gpu-bellman-ford", 
@@ -99,8 +99,12 @@ int main(int argc, char* argv[]) {
     bool USE_EDGE_WEIGHTS = true;
     // construct adjacency list
     auto [parsed_edge_list, max_node] = read_edge_list(input_file, USE_EDGE_WEIGHTS);
+
+    // account for 0-indexing when calculating number of nodes
+    int num_nodes = max_node + 1;
+
     if (DEBUG_PRINT) {
-        std::cout << "Number of nodes in the graph: " << max_node << std::endl; 
+        std::cout << "Number of nodes in the graph: " << num_nodes << std::endl;
         std::cout << "Number of edges in the graph: " << parsed_edge_list.size() << std :: endl;
     }
 
@@ -123,9 +127,9 @@ int main(int argc, char* argv[]) {
 
     CSR graphCSR;
     if (ASYNC_MEMORY && (algo == "gpu-bellman-ford" || algo == "gpu-delta-stepping")) {
-        graphCSR = construct_sparse_CSR(adjList, max_node, true);
+        graphCSR = construct_sparse_CSR(adjList, num_nodes, true);
     } else {
-        graphCSR = construct_sparse_CSR(adjList, max_node, false);
+        graphCSR = construct_sparse_CSR(adjList, num_nodes, false);
     }
     std::cout<< "Constructed sparse CSR representation" << std::endl;
     if (DEBUG_PRINT) {
@@ -135,17 +139,16 @@ int main(int argc, char* argv[]) {
     // start algorithm
     auto start_algo = std::chrono::steady_clock::now();
     
-    int* min_distances = new int[max_node]; 
-    int* p = new int[max_node]; 
+    int* min_distances = new int[num_nodes];
+    int* p = new int[num_nodes];
 
     // Doesn't seem to be worth it. 
     if (false) {
-        cudaMallocHost((void**) &min_distances, (max_node) * sizeof(int)); 
-        cudaMallocHost((void**) &p, (max_node) * sizeof(int)); 
-    }
-    else {
-        min_distances = new int[max_node]; 
-        p = new int[max_node]; 
+        cudaMallocHost((void**) &min_distances, (num_nodes) * sizeof(int));
+        cudaMallocHost((void**) &p, (num_nodes) * sizeof(int));
+    } else {
+        min_distances = new int[num_nodes];
+        p = new int[num_nodes];
     }
 
     int delta = find_int_arg(argc, argv, "-D", 50);
@@ -153,16 +156,14 @@ int main(int argc, char* argv[]) {
     std::cout << "Running algorithm: " << algo << std::endl;
     std :: cout << "Delta: " << delta << std :: endl;
     if (algo == "serial-dijkstra") {
-        st_dijkstra(adjList, source_node, max_node, min_distances, p);
+        st_dijkstra(adjList, source_node, num_nodes, min_distances, p);
     } else if (algo == "serial-delta-stepping") {
-        delta_stepping(graphCSR, source_node, max_node, min_distances, p, delta);
+        delta_stepping(graphCSR, source_node, num_nodes, min_distances, p, delta);
     } else if (algo == "gpu-bellman-ford") {
-        initializeBellmanFord(graphCSR, source_node, max_node, min_distances, p);
-    } 
-    else if (algo == "gpu-delta-stepping") {
-        initializeDeltaStepping(graphCSR, source_node, max_node, min_distances, p, delta); 
-    }
-    else {
+        initializeBellmanFord(graphCSR, source_node, num_nodes, min_distances, p);
+    } else if (algo == "gpu-delta-stepping") {
+        initializeDeltaStepping(graphCSR, source_node, num_nodes, min_distances, p, delta);
+    } else {
         std::cout<<"Invalid algorithm provided. " << std::endl;
         std::cout << "-a <algo>: set the algorithm to run" << std::endl;
     }
@@ -189,13 +190,13 @@ int main(int argc, char* argv[]) {
     // save output if specified
     if (!output_file.empty()) {
         int counter = 0;
-        std::ofstream fsave(output_file); 
+        std::ofstream fsave(output_file);
 
-        fsave << "source\tdistance" << std :: endl; 
+        fsave << "source\tdistance" << std::endl;
         for (int i = 0; i < graphCSR.numNodes; i++) {
             int distance = min_distances[i];
             if (distance != INT_MAX) { 
-                fsave << counter << "\t" << distance << std :: endl;
+                fsave << counter << "\t" << distance << std::endl;
             }
             counter++;
         }

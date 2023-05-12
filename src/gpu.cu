@@ -131,10 +131,9 @@ __global__ void bellman_initialize_dists_array(int* d_dists, int num_nodes, int 
 /**
  * Requires: no negative-weight cycles
  */
-void initializeBellmanFord(CSR graphCSR, int source, int max_node, int* d, int* p) {
+void initializeBellmanFord(CSR graphCSR, int source, int num_nodes, int* d, int* p) {
 
     struct timeval start, stop;
-    int num_nodes = max_node + 1; 
 
     int* d_dists;
     int* d_preds;
@@ -426,9 +425,7 @@ __global__ void is_empty_B_i(int* d_B, int num_nodes, bool* is_empty, int i) {
 
 }
 
-void initializeDeltaStepping(CSR graphCSR, int source, int max_node, int* d, int* p, int Delta) {
-
-    int num_nodes = max_node + 1; 
+void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, int* p, int Delta) {
     std::cout << "Begin CUDA Delta Stepping with Delta: " << Delta << std::endl;
 
     cudaEvent_t begin_memory_alloc, end_memory_alloc; 

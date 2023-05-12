@@ -20,6 +20,6 @@ typedef struct CSR {
 // adjacency list = u -> list of neighbors represented as (v, edge_weight)
 std::unordered_map<int, std::list<std::pair<int, int>>> construct_adj_list(std::list<std::pair<std::pair<int, int>, int>> edge_list);
 void print_adj_list(std::unordered_map<int, std::list<std::pair<int, int>>>  adjList);
-CSR construct_sparse_CSR(std::unordered_map<int, std::list<std::pair<int, int>>> adjList, int max_node, bool is_cuda);
+CSR construct_sparse_CSR(std::unordered_map<int, std::list<std::pair<int, int>>> adjList, int num_nodes, bool is_cuda);
 
 #endif //GRAPHCUDA_GRAPH_H

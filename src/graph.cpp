@@ -16,7 +16,7 @@ void print_adj_list(std::unordered_map<int, std::list<std::pair<int, int>>>  adj
     for (const auto &token: adjList) {
         std::cout << "Adjacency list of " << token.first << std::endl;
         for (const auto &elem: token.second) {
-            std::cout << elem.first << ", ";
+            std::cout << "(" << elem.first << ", " << elem.second << ") ";
         }
         std::cout << std::endl;
     }
@@ -47,8 +47,7 @@ std::unordered_map<int, std::list<std::pair<int, int>>> construct_adj_list(std::
 }
 
 
-CSR construct_sparse_CSR(std::unordered_map<int, std::list<std::pair<int, int>>> adj_list, int max_node, bool is_cuda) {
-    int num_nodes = max_node + 1; 
+CSR construct_sparse_CSR(std::unordered_map<int, std::list<std::pair<int, int>>> adj_list, int num_nodes, bool is_cuda) {
     int* row_pointers; 
     int* neighbor_nodes; // ids of neighbor nodes in adj_list
     int* edge_weights; 

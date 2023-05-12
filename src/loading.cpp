@@ -14,7 +14,7 @@
 void print_edge_list(std::list<std::pair<std::pair<int, int>, int>> parsed_edge_list) {
     for (const auto &token: parsed_edge_list) {
         auto edge = token.first;
-        std::cout << edge.first << ", " << edge.second << "\n";
+        std::cout << "(" << edge.first << ", " << edge.second << "), " << token.second << std::endl;
     }
 }
 

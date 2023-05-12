@@ -25,10 +25,8 @@ int num_nodes, int* d, int* p) {
 
     auto start_algo = std::chrono::steady_clock::now();
 
-    for (int i = 0; i < num_nodes; i++) {
-        d[i] = INF; 
-        p[i] = -1;
-    }
+    std::fill_n(d, num_nodes, INF);
+    std::fill_n(p, num_nodes, -1);
     
     d[source] = 0;
     int counter = 0;
@@ -42,9 +40,9 @@ int num_nodes, int* d, int* p) {
             int to = edge.first;
             // supports graphs with weighted edges
             int len = edge.second;
-
+            
             if (d[v] < INT_MAX && d[v] + len < d[to]) {
-                q.erase({d[to], to}); 
+                q.erase({d[to], to});
                 d[to] = d[v] + len;
                 p[to] = v;
                 q.insert({d[to], to});
