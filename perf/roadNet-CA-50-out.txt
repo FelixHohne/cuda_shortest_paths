@@ -1,0 +1,17 @@
+Parsing edge list
+Input file is: ../datasets/roadNet-CA.txt
+Finished parsing edge list of size 5533214
+Edges kept: 2766607
+Constructed adjacency list
+is cuda: 1
+Constructed sparse CSR representation
+Running algorithm: gpu-delta-stepping
+Delta: 50
+Begin CUDA Delta Stepping with Delta: 50
+Using Async Memory
+Memory Op time in milis: 9.39136
+Thrust sort time: 205.715
+Light Req time: 316.866
+Total relax time: 6.03942
+Time to run Algorithm: 0.626696
+Min distance vector source is : 0

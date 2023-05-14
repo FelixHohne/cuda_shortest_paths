@@ -57,6 +57,7 @@ int main(int argc, char* argv[]) {
         std::cout << "Options:" << std::endl;
         std::cout << "-h: see this help" << std::endl;
         std::cout << "-f <filename>: file to load graph from" << std::endl;
+        std::cout << "-w <n>: used for weak scaling, n indicates the percentage of input edges to use for the actual graph. For example, -w 25 uses 25 percent of the edges from the input edge list to construct the new graph" << std::endl;
         std::cout << "-a <algo>: set the algorithm to run" << std::endl;
         std::cout << "\tSupported algorithms: ";
         for (int i = 0; i < algos.size(); i++) {
@@ -90,6 +91,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    int weak_scaling_percent = find_int_arg(argc, argv, "-w", 100);
+
     std::string output_file = find_string_arg(argc, argv, "-o", "");
 
     std::cout<< "Parsing edge list" << std::endl;
@@ -108,11 +111,20 @@ int main(int argc, char* argv[]) {
         std::cout << "Number of edges in the graph: " << parsed_edge_list.size() << std :: endl;
     }
 
-    std::cout<<"Finished parsing edge list" << std::endl;
+    std::cout<<"Finished parsing edge list of size " << parsed_edge_list.size() << std::endl;
     if (DEBUG_PRINT) {
         print_edge_list(parsed_edge_list);
     }
-    std::unordered_map<int, std::list<std::pair<int, int>>> adjList = construct_adj_list(parsed_edge_list);
+    int edges_kept = (int) ((double) parsed_edge_list.size() * ((double) weak_scaling_percent / 100.0));
+    std::cout << "Edges kept: " << edges_kept << std::endl;
+
+    std::list<std::pair<std::pair<int, int>, int>> filtered_edge_list;
+    int i = 0;
+    for (auto it = parsed_edge_list.begin(); i < edges_kept; ++it) {
+        filtered_edge_list.push_back(*it);
+        i++;
+    }
+    std::unordered_map<int, std::list<std::pair<int, int>>> adjList = construct_adj_list(filtered_edge_list);
 
     std::cout<<"Constructed adjacency list" << std::endl;
 

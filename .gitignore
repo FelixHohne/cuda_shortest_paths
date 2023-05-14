@@ -32,3 +32,6 @@
 *.app
 
 build/
+
+datasets/soc-LiveJournal.txt
+datasets/soc-pokec-relationships.txt
