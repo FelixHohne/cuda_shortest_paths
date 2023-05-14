@@ -1,0 +1,17 @@
+Parsing edge list
+Input file is: ../datasets/soc-LiveJournal.txt
+Finished parsing edge list of size 68993772
+Edges kept: 34496886
+Constructed adjacency list
+is cuda: 1
+Constructed sparse CSR representation
+Running algorithm: gpu-delta-stepping
+Delta: 50
+Begin CUDA Delta Stepping with Delta: 50
+Using Async Memory
+Memory Op time in milis: 43.0068
+Thrust sort time: 21.4527
+Light Req time: 13.7014
+Total relax time: 1.6633
+Time to run Algorithm: 0.102991
+Min distance vector source is : 0

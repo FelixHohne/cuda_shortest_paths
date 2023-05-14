@@ -1,0 +1,17 @@
+Parsing edge list
+Input file is: ../datasets/web-Stanford.txt
+Finished parsing edge list of size 2312497
+Edges kept: 578124
+Constructed adjacency list
+is cuda: 1
+Constructed sparse CSR representation
+Running algorithm: gpu-delta-stepping
+Delta: 50
+Begin CUDA Delta Stepping with Delta: 50
+Using Async Memory
+Memory Op time in milis: 5.86013
+Thrust sort time: 0.007424
+Light Req time: 0.012928
+Total relax time: 0.006944
+Time to run Algorithm: 0.00730273
+Min distance vector source is : 0

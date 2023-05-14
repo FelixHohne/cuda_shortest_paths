@@ -1,0 +1,17 @@
+Parsing edge list
+Input file is: ../datasets/soc-pokec-relationships.txt
+Finished parsing edge list of size 30622563
+Edges kept: 30622563
+Constructed adjacency list
+is cuda: 1
+Constructed sparse CSR representation
+Running algorithm: gpu-delta-stepping
+Delta: 50
+Begin CUDA Delta Stepping with Delta: 50
+Using Async Memory
+Memory Op time in milis: 28.2794
+Thrust sort time: 0.007648
+Light Req time: 0.616128
+Total relax time: 0.107232
+Time to run Algorithm: 0.0418185
+Min distance vector source is : 0

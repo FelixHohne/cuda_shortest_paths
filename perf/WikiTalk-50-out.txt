@@ -1,0 +1,17 @@
+Parsing edge list
+Input file is: ../datasets/WikiTalk.txt
+Finished parsing edge list of size 5021410
+Edges kept: 2510705
+Constructed adjacency list
+is cuda: 1
+Constructed sparse CSR representation
+Running algorithm: gpu-delta-stepping
+Delta: 50
+Begin CUDA Delta Stepping with Delta: 50
+Using Async Memory
+Memory Op time in milis: 9.22925
+Thrust sort time: 3.26464
+Light Req time: 1.6695
+Total relax time: 0.148896
+Time to run Algorithm: 0.0346748
+Min distance vector source is : 0
