@@ -751,7 +751,7 @@ void initializeDeltaStepping(CSR graphCSR, int source, int num_nodes, int* d, in
 
         std :: cout << "Memory Op time in milis: " << memory_alloc_time + memory_copy_time << std :: endl;
 
-        std :: cout << "Thrust sort time" << total_thrust_time << std :: endl;
+        std :: cout << "Thrust sort time: " << total_thrust_time << std :: endl;
 
         std :: cout << "Light Req time: " << total_light_req_time << std :: endl;
 
