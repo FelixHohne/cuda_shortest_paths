@@ -103,27 +103,34 @@ int main(int argc, char* argv[]) {
     // construct adjacency list
     auto [parsed_edge_list, max_node] = read_edge_list(input_file, USE_EDGE_WEIGHTS);
 
-    // account for 0-indexing when calculating number of nodes
-    int num_nodes = max_node + 1;
-
-    if (DEBUG_PRINT) {
-        std::cout << "Number of nodes in the graph: " << num_nodes << std::endl;
-        std::cout << "Number of edges in the graph: " << parsed_edge_list.size() << std :: endl;
-    }
-
     std::cout<<"Finished parsing edge list of size " << parsed_edge_list.size() << std::endl;
     if (DEBUG_PRINT) {
         print_edge_list(parsed_edge_list);
     }
+
+    // sample edges for weak scaling
     int edges_kept = (int) ((double) parsed_edge_list.size() * ((double) weak_scaling_percent / 100.0));
     std::cout << "Edges kept: " << edges_kept << std::endl;
 
     std::list<std::pair<std::pair<int, int>, int>> filtered_edge_list;
     int i = 0;
+    max_node = 0;
     for (auto it = parsed_edge_list.begin(); i < edges_kept; ++it) {
         filtered_edge_list.push_back(*it);
+        auto pair = (*it).first;
+        max_node = std::max(max_node, pair.first);
+        max_node = std::max(max_node, pair.second);
         i++;
     }
+
+    // account for 0-indexing when calculating number of nodes
+    int num_nodes = max_node + 1;
+
+    if (DEBUG_PRINT) {
+        std::cout << "Number of nodes in the graph: " << num_nodes << std::endl;
+        std::cout << "Number of edges in the graph: " << filtered_edge_list.size() << std :: endl;
+    }
+
     std::unordered_map<int, std::list<std::pair<int, int>>> adjList = construct_adj_list(filtered_edge_list);
 
     std::cout<<"Constructed adjacency list" << std::endl;

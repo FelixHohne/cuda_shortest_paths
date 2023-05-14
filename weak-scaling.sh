@@ -1,4 +1,10 @@
 #!/bin/sh
+echo "roadNet-CA.txt"
+./graph_cuda -f ../datasets/roadNet-CA.txt -a gpu-delta-stepping -s 0 -w 25 &> ../perf/roadNet-CA-25-out.txt
+./graph_cuda -f ../datasets/roadNet-CA.txt -a gpu-delta-stepping -s 0 -w 50 &> ../perf/roadNet-CA-50-out.txt
+./graph_cuda -f ../datasets/roadNet-CA.txt -a gpu-delta-stepping -s 0 -w 75 &> ../perf/roadNet-CA-75-out.txt
+./graph_cuda -f ../datasets/roadNet-CA.txt -a gpu-delta-stepping -s 0 -w 100 &> ../perf/roadNet-CA-100-out.txt
+
 echo "soc-LiveJournal.txt"
 ./graph_cuda -f ../datasets/soc-LiveJournal.txt -a gpu-delta-stepping -s 0 -w 25 &> ../perf/soc-LiveJournal-25-out.txt
 ./graph_cuda -f ../datasets/soc-LiveJournal.txt -a gpu-delta-stepping -s 0 -w 50 &> ../perf/soc-LiveJournal-50-out.txt

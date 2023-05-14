@@ -9,9 +9,9 @@ Running algorithm: gpu-delta-stepping
 Delta: 50
 Begin CUDA Delta Stepping with Delta: 50
 Using Async Memory
-Memory Op time in milis: 8.3217
-Thrust sort time: 2.5329
-Light Req time: 1.31478
-Total relax time: 0.104704
-Time to run Algorithm: 0.0230345
+Memory Op time in milis: 8.00278
+Thrust sort time: 2.13328
+Light Req time: 0.728256
+Total relax time: 0.103552
+Time to run Algorithm: 0.0223867
 Min distance vector source is : 0
