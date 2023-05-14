@@ -39,7 +39,7 @@ def plot_weak():
     shortnames['WikiTalk'] = 'wikiTalk'
 
     percentages = [25, 50, 75, 100]
-    plt.title('Weak Scaling Performance')
+    plt.title('Weak Scaling of Edge-wise Async Delta-Stepping')
     plt.xlabel('Percentage of Edges Used')
     plt.ylabel('Simulation Time (seconds)')
     plt.xscale('log')
