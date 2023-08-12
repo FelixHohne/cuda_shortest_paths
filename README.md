@@ -7,8 +7,8 @@ In this project, we implemented algorithms for solving the Single-Source
 Shortest Paths (SSSP) problem in CUDA. We demonstrate that though
 the GPU appears more suitable for dense computation, GPUs will be able
 to accelerate SSSP on large graphs, with good performance when compared
-to CPUs with many cores. 
-
+to CPUs. All experiments were run on the Department of Energy's Perlmutter Computer, 
+utilizing Nvidia A100 GPUs. 
 
 ## CUDA-Based Delta-Stepping
 
@@ -27,6 +27,57 @@ distance is in a given range, and
 processing all nodes in a single bucket at a time. Setting the bucket size to 1
 corresponds to Dijkstra's, while setting the bucket size to infinity corresponds to
 Bellman-Ford, which allows us to tune the parallelism in the algorithms.  
+
+### Primary Implementation
+
+In addition to the arrays required for the graph's CSR and the resultant
+distances, we first initialize the following data-structures and
+allocate them on device memory, including: $|E|$ sized arrays d_light
+and d_heavy corresponding to the pseudo-code's Light and Heavy
+arrays, which contain a valid node-id if the neighbor node corresponds
+to a light/heavy edge of the node, and -1 otherwise; $|E|$ sized array
+d_Req of ReqElement structs containing nodeId and current distance
+from the source, that corresponds to Req in the pseudo-code; $|V|$ sized
+array d_B that maps nodes (thread-index) to their bucket-index; and
+d_S, corresponding to set S in the pseudo-code. Each array is
+initialzed within CUDA-kernels, which are load-balanced depending on the
+array-size (i.e. 1 thread per edge or node).
+
+Since data structures corresponding to the buckets and Req are only
+modified by CUDA kernels, we needed additional logic to copy the current
+size of the relevant arrays from GPU to CPU after every modification,
+and have the host perform checks (e.g. boolean is_empty checks if all
+buckets (or a specific one) are empty) / pass data to downstream kernels
+(e.g. passing d_Req_size to the relax procedure). We allocated these
+variables in CUDA's unified memory using cudaMallocManaged to allow host
+access. In our implementation, entries in array d_Req are sorted and
+valid up to the size contained in d_Req_size. At a high-level, we
+have an outer while-loop that checks if all buckets are is_empty
+(updated as above each iteration), and processes buckets in order of
+their indices. At each iteration, we have a kernel to clear d_S (fill
+with -1), and then begin processing Light edges. We re-use is_empty
+to check if the current bucket $B_i$ being processed is empty in another
+while loop. Within this loop, the kernel computeLightReq updates
+d_Req with Light edges (and updates d_Req_size), 1 thread per
+Light edge. After this, kernel update_S_clear_B_i updates set S as
+in the pseudo-code and clears the current bucket B_i, i.e. fills
+corresponding elements in d_B with -1, with a thread per node. We
+then sort the first d_Req_size elements (ReqElement structs) of
+d_Req using $thrust::sort$ and a custom comparator that first
+compares structs by nodeId and breaks ties with current source-distance.
+Then, a kernel performs the relax procedure with the sorted Req elements
+and updates buckets (1 thread per edge) according to the pseudo-code.
+Finally, another kernel checks if the current bucket $B_i$ is empty and
+updates is_empty accordingly - completing the Light edges processing
+for this outer-loop iteration.
+
+For processing Heavy edges, the kernel computeHeavyReq updates d_Req
+with Heavy edges as in the pseudo-code and recomputes d_Req_size (1
+thread per node). Then, we again call the relax kernel to process the
+updated d_Req and update buckets according. Finally, a kernel checks
+if all buckets are empty and updates is_empty accordingly, and we
+move on to the next outer-loop iteration that will process bucket
+$B_{i+1}$.
 
 ## Optimizations 
 
